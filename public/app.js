@@ -108,6 +108,15 @@
 
     modulePage.classList.remove("visible");
     modulePage.innerHTML = buildModulePage(m, index);
+    // Wrap tables in scroll containers for mobile overflow
+    modulePage.querySelectorAll("table").forEach(tbl => {
+      if (!tbl.parentElement.classList.contains("table-scroll")) {
+        const wrap = document.createElement("div");
+        wrap.className = "table-scroll";
+        tbl.parentNode.insertBefore(wrap, tbl);
+        wrap.appendChild(tbl);
+      }
+    });
     buildFooterNav(index);
     updateProgress();
     updateSidebarActive(m.id);
@@ -318,7 +327,7 @@
 
     const m   = MODULES.find(x => x.id === moduleId);
     const btn = document.getElementById("check_" + moduleId);
-    if (btn && m && answeredMap[moduleId].size >= m.assessment.questions.length) {
+    if (btn && m && m.assessment && answeredMap[moduleId].size >= m.assessment.questions.length) {
       btn.disabled = false;
     }
   };

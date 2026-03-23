@@ -372,6 +372,11 @@ body {
 .step-content p { font-size: 14px; color: var(--gray-600); margin: 0; }
 
 /* Tables */
+/* JS-injected wrapper for all tables in module content */
+.table-scroll {
+  display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 16px 0;
+}
+.table-scroll > table { margin: 0; }
 .content-table-wrap, .data-table-wrap {
   display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 16px 0;
 }
@@ -577,8 +582,8 @@ pre.code-content {
   .btn-primary {
     display: flex; width: 100%; justify-content: center;
   }
-  /* Wrap assessment options */
-  .opt-label { align-items: flex-start; }
+  /* Assessment options wrap on narrow screens */
+  .option-label { align-items: flex-start; }
 }
 @media (max-width: 400px) {
   .module-cards-grid { grid-template-columns: 1fr; }
