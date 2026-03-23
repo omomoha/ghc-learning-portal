@@ -108,6 +108,10 @@
 
     modulePage.classList.remove("visible");
     modulePage.innerHTML = buildModulePage(m, index);
+    // Strip emoji from h4 headings inside injected content HTML
+    modulePage.querySelectorAll("h4").forEach(h => {
+      h.textContent = stripEmoji(h.textContent);
+    });
     // Wrap tables in scroll containers for mobile overflow
     modulePage.querySelectorAll("table").forEach(tbl => {
       if (!tbl.parentElement.classList.contains("table-scroll")) {
@@ -187,7 +191,7 @@
       </div>`;
 
     m.sections.forEach(s => {
-      html += `<div class="content-section"><h3>${s.title}</h3>`;
+      html += `<div class="content-section"><h3>${stripEmoji(s.title)}</h3>`;
       if (s.content) html += s.content;
       if (s.codeBlocks) s.codeBlocks.forEach(cb => { html += buildCodeBlock(cb); });
       if (s.image) html += `<div class="code-image"><img src="images/${s.image}" alt="${s.title}" loading="lazy"></div>`;
@@ -209,21 +213,56 @@
     return html;
   }
 
+  // Language → file-dot colour (mirrors VS Code icon theme)
+  const LANG_COLOR = {
+    javascript: '#CBCB41', js: '#CBCB41',
+    typescript: '#3178C6', ts: '#3178C6',
+    python: '#3572A5', py: '#3572A5',
+    json: '#CBCB41',
+    yaml: '#CB171E', yml: '#CB171E',
+    markdown: '#519ABA', md: '#519ABA',
+    bash: '#89E051', sh: '#89E051', shell: '#89E051',
+    html: '#E34C26', css: '#563D7C',
+    prompt: '#C792EA',
+  };
+
   function buildCodeBlock(cb) {
-    const id = "cb_" + Math.random().toString(36).substr(2, 8);
-    return `<div class="code-block">
-      <div class="code-header">
-        <span class="code-lang">${cb.lang}${cb.title ? " &mdash; " + cb.title : ""}</span>
-        <button class="code-copy" onclick="copyCode('${id}')">Copy</button>
+    const id       = "cb_" + Math.random().toString(36).substr(2, 8);
+    const tabName  = cb.title || (cb.lang + ' snippet');
+    const dotColor = LANG_COLOR[cb.lang] || '#858585';
+
+    // Build gutter line numbers
+    const lines = cb.code.replace(/\n$/, '').split('\n');
+    const gutter = lines.map((_, i) =>
+      `<span class="vsc-ln">${i + 1}</span>`
+    ).join('');
+
+    return `<div class="vsc-window">
+      <div class="vsc-titlebar">
+        <div class="vsc-dots">
+          <span class="vsc-dot vsc-red"></span>
+          <span class="vsc-dot vsc-yellow"></span>
+          <span class="vsc-dot vsc-green"></span>
+        </div>
+        <div class="vsc-tabs">
+          <div class="vsc-tab">
+            <span class="vsc-tab-dot" style="background:${dotColor}"></span>
+            <span class="vsc-tab-name">${escHtml(tabName)}</span>
+          </div>
+        </div>
+        <button class="vsc-copy" onclick="copyCode('${id}')">Copy</button>
       </div>
-      <pre class="code-content" id="${id}">${escHtml(cb.code)}</pre>
+      <div class="vsc-body">
+        <div class="vsc-gutter" aria-hidden="true">${gutter}</div>
+        <pre class="vsc-code" id="${id}">${escHtml(cb.code)}</pre>
+      </div>
     </div>`;
   }
 
   function buildAssessment(m) {
     let html = `<div class="assessment" id="assessment_${m.id}">
       <div class="assessment-header">
-        <h3>&#128302; Module ${m.id} — Technical Assessment</h3>
+        <h3>Module ${m.id} — Technical Assessment</h3>
         <p>Answer all questions then click Check. Pass mark: 70%.</p>
       </div>
       <div class="assessment-body">`;
@@ -310,7 +349,7 @@
     const el = document.getElementById(id);
     if (!el) return;
     navigator.clipboard.writeText(el.textContent).then(() => {
-      const btn = el.parentElement.querySelector(".code-copy");
+      const btn = el.closest(".vsc-window")?.querySelector(".vsc-copy");
       if (btn) { btn.textContent = "Copied!"; btn.classList.add("copied"); }
       setTimeout(() => { if (btn) { btn.textContent = "Copy"; btn.classList.remove("copied"); } }, 2000);
     });
@@ -387,6 +426,11 @@
     const d = document.createElement("div");
     d.textContent = t;
     return d.innerHTML;
+  }
+
+  // Strip leading emoji + trailing space from heading text
+  function stripEmoji(str) {
+    return str.replace(/^[\p{Extended_Pictographic}\uFE0F\u20E3\u200D\u{1F3FB}-\u{1F3FF}]+\s*/gu, '');
   }
 
   // ===== ROUTER =====
