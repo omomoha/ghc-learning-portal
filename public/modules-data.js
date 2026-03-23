@@ -1923,7 +1923,7 @@ gh issue view 18 --json assignees,comments --jq '{assignees: [.assignees[].login
         {
           lang: "markdown",
           title: ".github/copilot-instructions.md (Repository Level)",
-          code: `# Project: Andela Talent Platform
+          code: `# Project: Acme Talent Platform
 
 ## Architecture
 This is a monorepo with:
@@ -1977,7 +1977,7 @@ This is a monorepo with:
         {
           lang: "markdown",
           title: "Org-level: .github/copilot-instructions.md (Security-focused)",
-          code: `# Organization: Andela Engineering — Security Standards
+          code: `# Organization: Acme Engineering — Security Standards
 
 ## SECURITY (applies to ALL repositories)
 - NEVER suggest hardcoded secrets, API keys, or passwords
@@ -1994,7 +1994,7 @@ This is a monorepo with:
         {
           lang: "markdown",
           title: "Repo-level: .github/copilot-instructions.md (Stack-focused)",
-          code: `# Project: Andela Talent Platform
+          code: `# Project: Acme Talent Platform
 
 ## TECH STACK (this repo only)
 - Backend: Express.js + TypeScript (strict mode)
@@ -2002,7 +2002,7 @@ This is a monorepo with:
 - State: Zustand (NOT Redux — org-level security rules still apply)
 - Testing: Vitest + React Testing Library
 
-## NOTE: Andela security rules from org-level ALSO apply here.
+## NOTE: Org-level security rules ALSO apply here.
 ## This file adds project-specific patterns ON TOP of org rules.
 ## To see what the org-level rules say, check the organisation's
 ## copilot-instructions.md in .github/`
@@ -2148,10 +2148,10 @@ export const useUserStore = create<UserStore>((set) => ({
           lang: "markdown",
           title: "skills/code-reviewer/SKILL.md",
           code: `---
-name: "Andela Code Review Expert"
+name: "Code Review Expert"
 description: "Reviews code changes for security, performance, and adherence to team standards"
 version: "1.0.0"
-author: "Andela Engineering"
+author: "Acme Engineering"
 triggers:
   - "review this code"
   - "check this PR"
@@ -2160,7 +2160,7 @@ triggers:
 
 # Code Review Expert
 
-You are a senior code reviewer at Andela. Your job is to review
+You are a senior code reviewer. Your job is to review
 code changes thoroughly and provide actionable feedback.
 
 ## Review Checklist
@@ -2212,7 +2212,7 @@ Structure your review as:
         {
           lang: "markdown",
           title: "Composing Multiple Skills in copilot-instructions.md",
-          code: `# Andela Talent Platform — Copilot Configuration
+          code: `# Acme Talent Platform — Copilot Configuration
 
 ## Always-Active Skills
 These skills are loaded for every Copilot interaction in this repo:
@@ -2319,7 +2319,7 @@ class UserCreate(BaseModel):
         json_schema_extra = {
             "example": {
                 "name": "Ada Lovelace",
-                "email": "ada@andela.com",
+                "email": "ada@acme.com",
                 "role": "engineer"
             }
         }
