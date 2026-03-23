@@ -213,48 +213,113 @@
     return html;
   }
 
-  // Language → file-dot colour (mirrors VS Code icon theme)
-  const LANG_COLOR = {
-    javascript: '#CBCB41', js: '#CBCB41',
-    typescript: '#3178C6', ts: '#3178C6',
-    python: '#3572A5', py: '#3572A5',
-    json: '#CBCB41',
-    yaml: '#CB171E', yml: '#CB171E',
-    markdown: '#519ABA', md: '#519ABA',
-    bash: '#89E051', sh: '#89E051', shell: '#89E051',
-    html: '#E34C26', css: '#563D7C',
-    prompt: '#C792EA',
+  // Language metadata — label badge + colours matching VS Code icon theme
+  const LANG_META = {
+    javascript: { label:'JS',   bg:'#f7df1e', fg:'#000' },
+    js:         { label:'JS',   bg:'#f7df1e', fg:'#000' },
+    typescript: { label:'TS',   bg:'#3178C6', fg:'#fff' },
+    ts:         { label:'TS',   bg:'#3178C6', fg:'#fff' },
+    python:     { label:'PY',   bg:'#3776AB', fg:'#fff' },
+    py:         { label:'PY',   bg:'#3776AB', fg:'#fff' },
+    json:       { label:'{}',   bg:'#CBCB41', fg:'#000' },
+    yaml:       { label:'YML',  bg:'#CB171E', fg:'#fff' },
+    yml:        { label:'YML',  bg:'#CB171E', fg:'#fff' },
+    markdown:   { label:'MD',   bg:'#519ABA', fg:'#fff' },
+    md:         { label:'MD',   bg:'#519ABA', fg:'#fff' },
+    bash:       { label:'SH',   bg:'#4EAA25', fg:'#fff' },
+    shell:      { label:'SH',   bg:'#4EAA25', fg:'#fff' },
+    sh:         { label:'SH',   bg:'#4EAA25', fg:'#fff' },
+    html:       { label:'HTML', bg:'#E34C26', fg:'#fff' },
+    css:        { label:'CSS',  bg:'#1572B6', fg:'#fff' },
+    prompt:     { label:'AI',   bg:'#C792EA', fg:'#1e1e1e' },
   };
 
-  function buildCodeBlock(cb) {
-    const id       = "cb_" + Math.random().toString(36).substr(2, 8);
-    const tabName  = cb.title || (cb.lang + ' snippet');
-    const dotColor = LANG_COLOR[cb.lang] || '#858585';
+  // Activity bar SVG icons
+  const ACT_ICONS = [
+    // Explorer (active)
+    { svg: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>', active: true },
+    // Search
+    { svg: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>', active: false },
+    // Source control
+    { svg: '<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>', active: false },
+    // Extensions
+    { svg: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>', active: false },
+  ];
 
-    // Build gutter line numbers
-    const lines = cb.code.replace(/\n$/, '').split('\n');
-    const gutter = lines.map((_, i) =>
-      `<span class="vsc-ln">${i + 1}</span>`
-    ).join('');
+  const actbarHtml = ACT_ICONS.map(ic =>
+    `<div class="vsc-act${ic.active ? ' vsc-active' : ''}">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ic.svg}</svg>
+    </div>`
+  ).join('');
+
+  function buildCodeBlock(cb) {
+    const id   = "cb_" + Math.random().toString(36).slice(2, 10);
+    const meta = LANG_META[cb.lang] || { label: (cb.lang||'').slice(0,4).toUpperCase()||'TXT', bg:'#555', fg:'#fff' };
+
+    // Extract clean filename for the tab
+    const raw      = cb.title || '';
+    const stripped = raw.split(' \u2014 ')[0].split(' — ')[0].trim(); // remove "— descriptor"
+    const tabName  = stripped.split('/').pop() || (cb.lang + '-snippet');
+
+    // Breadcrumb: show path segments if title has slashes, else just filename
+    const bcParts = stripped.includes('/')
+      ? stripped.split('/')
+      : [tabName];
+    const bcHtml = bcParts.map((seg, i) => {
+      const isLast = i === bcParts.length - 1;
+      return isLast
+        ? `<span class="vsc-bc-seg vsc-bc-active">${escHtml(seg)}</span>`
+        : `<span class="vsc-bc-seg">${escHtml(seg)}</span><span class="vsc-bc-arrow">›</span>`;
+    }).join('');
+
+    // Line numbers
+    const lines     = cb.code.replace(/\n$/, '').split('\n');
+    const lineCount = lines.length;
+    const gutter    = lines.map((_, i) => `<span class="vsc-ln">${i + 1}</span>`).join('');
 
     return `<div class="vsc-window">
-      <div class="vsc-titlebar">
+      <div class="vsc-chrome">
         <div class="vsc-dots">
           <span class="vsc-dot vsc-red"></span>
           <span class="vsc-dot vsc-yellow"></span>
           <span class="vsc-dot vsc-green"></span>
         </div>
-        <div class="vsc-tabs">
-          <div class="vsc-tab">
-            <span class="vsc-tab-dot" style="background:${dotColor}"></span>
-            <span class="vsc-tab-name">${escHtml(tabName)}</span>
-          </div>
-        </div>
+        <span class="vsc-chrome-label">Visual Studio Code</span>
         <button class="vsc-copy" onclick="copyCode('${id}')">Copy</button>
       </div>
-      <div class="vsc-body">
-        <div class="vsc-gutter" aria-hidden="true">${gutter}</div>
-        <pre class="vsc-code" id="${id}">${escHtml(cb.code)}</pre>
+      <div class="vsc-layout">
+        <div class="vsc-actbar">${actbarHtml}</div>
+        <div class="vsc-editor-area">
+          <div class="vsc-tabstrip">
+            <div class="vsc-tab">
+              <span class="vsc-tab-badge" style="background:${meta.bg};color:${meta.fg}">${meta.label}</span>
+              <span class="vsc-tab-filename">${escHtml(tabName)}</span>
+              <span class="vsc-tab-x">&times;</span>
+            </div>
+          </div>
+          <div class="vsc-breadcrumb">${bcHtml}</div>
+          <div class="vsc-editor-body">
+            <div class="vsc-gutter" aria-hidden="true">${gutter}</div>
+            <div class="vsc-scroll">
+              <pre class="vsc-code" id="${id}">${escHtml(cb.code)}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="vsc-statusbar">
+        <div class="vsc-status-left">
+          <span class="vsc-status-branch">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+            main
+          </span>
+          <span>0 errors, 0 warnings</span>
+        </div>
+        <div class="vsc-status-right">
+          <span>${lineCount} lines</span>
+          <span>${escHtml(cb.lang)}</span>
+          <span>UTF-8</span>
+          <span>LF</span>
+        </div>
       </div>
     </div>`;
   }
