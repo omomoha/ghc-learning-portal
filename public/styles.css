@@ -75,7 +75,7 @@ body {
   background: none; border: none; cursor: pointer;
   color: rgba(255,255,255,0.75); padding: 6px;
   border-radius: var(--radius-sm); transition: var(--t);
-  display: flex; align-items: center; flex-shrink: 0;
+  display: none; align-items: center; flex-shrink: 0;
 }
 .sidebar-toggle:hover { background: rgba(255,255,255,0.1); color: white; }
 .nav-brand {
@@ -234,15 +234,6 @@ body {
   transition: var(--t); box-shadow: 0 4px 16px rgba(0,180,160,0.35);
 }
 .btn-primary:hover { background: #00A090; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,180,160,0.4); }
-.btn-download {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 24px; background: transparent; color: rgba(255,255,255,0.85);
-  font-weight: 500; font-size: 14px; text-decoration: none;
-  border: 1.5px solid rgba(255,255,255,0.35); border-radius: 50px;
-  transition: var(--t); margin-top: 4px;
-}
-.btn-download:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.7); color: #fff; transform: translateY(-1px); }
-.btn-download svg { flex-shrink: 0; }
 
 /* ===== CURRICULUM SECTION ===== */
 .curriculum-section { padding: 48px 24px; }
@@ -381,10 +372,13 @@ body {
 .step-content p { font-size: 14px; color: var(--gray-600); margin: 0; }
 
 /* Tables */
+.content-table-wrap, .data-table-wrap {
+  display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 16px 0;
+}
 .content-table {
   width: 100%; border-collapse: separate; border-spacing: 0;
   border: 1px solid var(--gray-200); border-radius: var(--radius);
-  overflow: hidden; margin: 16px 0; font-size: 14px;
+  overflow: hidden; font-size: 14px; min-width: 480px;
 }
 .content-table th {
   background: var(--brand); color: white;
@@ -393,6 +387,21 @@ body {
 .content-table td { padding: 9px 14px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); }
 .content-table tr:last-child td { border-bottom: none; }
 .content-table tr:nth-child(even) td { background: var(--gray-50); }
+
+/* data-table — used in module content added sections */
+.data-table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  border: 1px solid var(--gray-200); border-radius: var(--radius);
+  overflow: hidden; font-size: 14px; min-width: 480px;
+}
+.data-table th {
+  background: var(--brand); color: white;
+  padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px;
+  white-space: nowrap;
+}
+.data-table td { padding: 9px 14px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); vertical-align: top; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:nth-child(even) td { background: var(--gray-50); }
 
 /* Code blocks */
 .code-block {
@@ -552,6 +561,7 @@ pre.code-content {
   .left-sidebar.open { transform: translateX(0); }
   .main-area { margin-left: 0; }
   .nav-progress-wrap { display: none; }
+  .sidebar-toggle { display: flex; }
 }
 @media (max-width: 600px) {
   .home-hero { padding: 40px 16px 40px; }
@@ -563,8 +573,16 @@ pre.code-content {
   .module-dots { order: -1; width: 100%; }
   .page-nav-btn { min-width: 100px; }
   .curriculum-section { padding: 32px 16px; }
+  /* Full-width hero CTA on mobile */
+  .btn-primary {
+    display: flex; width: 100%; justify-content: center;
+  }
+  /* Wrap assessment options */
+  .opt-label { align-items: flex-start; }
 }
 @media (max-width: 400px) {
   .module-cards-grid { grid-template-columns: 1fr; }
   .home-meta { gap: 12px; }
+  /* Truncate brand title on very small screens */
+  .brand-title { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 }
