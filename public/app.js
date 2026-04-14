@@ -31,6 +31,7 @@
   const sidebarToggle  = document.getElementById("sidebarToggle");
   const homeView      = document.getElementById("homeView");
   const moduleView    = document.getElementById("moduleView");
+  const prereqView    = document.getElementById("prereqView");
   const modulePage    = document.getElementById("modulePage");
   const moduleFooterNav = document.getElementById("moduleFooterNav");
   const navBreadcrumb = document.getElementById("navBreadcrumb");
@@ -90,11 +91,27 @@
   window.showHome = function () {
     homeView.style.display = "block";
     moduleView.style.display = "none";
+    prereqView.style.display = "none";
     navBreadcrumb.innerHTML = "";
     history.replaceState(null, "", "#home");
     updateSidebarActive(-1);
     updateProgress();
     refreshCards();
+  };
+
+  // ===== SHOW PREREQUISITE PAGE =====
+  window.showPrereq = function () {
+    homeView.style.display = "none";
+    moduleView.style.display = "none";
+    prereqView.style.display = "block";
+    navBreadcrumb.innerHTML =
+      `<a onclick="showHome()">Home</a>` +
+      `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` +
+      `<span>Prerequisites &amp; Details</span>`;
+    history.replaceState(null, "", "#prerequisites");
+    updateSidebarActive(-1);
+    window.scrollTo({ top: 0, behavior: "instant" });
+    closeSidebar();
   };
 
   // ===== GO TO MODULE =====
@@ -105,6 +122,7 @@
 
     homeView.style.display = "none";
     moduleView.style.display = "block";
+    prereqView.style.display = "none";
 
     modulePage.classList.remove("visible");
     modulePage.innerHTML = buildModulePage(m, index);
@@ -503,6 +521,8 @@
     const hash = window.location.hash;
     if (!hash || hash === "#" || hash === "#home") {
       showHome();
+    } else if (hash === "#prerequisites") {
+      showPrereq();
     } else if (hash.startsWith("#module-")) {
       const id  = parseInt(hash.replace("#module-", ""));
       const idx = MODULES.findIndex(m => m.id === id);
