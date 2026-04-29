@@ -118,7 +118,7 @@ Jest. Run the tests and fix any failures.</pre></div>
       {
         text: "Which VS Code setting enables Copilot's agent mode?",
         options: [
-          questions: [
+          "copilot.agent.activate",
           "github.copilot.agentMode",
           "chat.agent.enabled",
           "copilot.mode.agent"
