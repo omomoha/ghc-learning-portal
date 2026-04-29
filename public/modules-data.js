@@ -118,7 +118,7 @@ Jest. Run the tests and fix any failures.</pre></div>
       {
         text: "Which VS Code setting enables Copilot's agent mode?",
         options: [
-          "copilot.agent.activate",
+          questions: [
           "github.copilot.agentMode",
           "chat.agent.enabled",
           "copilot.mode.agent"
@@ -158,6 +158,98 @@ Jest. Run the tests and fix any failures.</pre></div>
         ],
         correct: 1,
         explanation: "github.copilot.chat.agent.autoFix enables the agent to detect errors in its output (like failing tests) and automatically attempt to fix them, completing the iterative self-correction loop."
+      },
+      // --- Advanced Questions ---
+      {
+        text: "You want to enforce a rule that all generated code must include a custom project header comment. How would you configure Copilot to do this for every agentic code generation?",
+        options: [
+          "Add a pre-commit hook in your repo",
+          "Add a custom instruction in github.copilot.chat.codeGeneration.instructions in .vscode/settings.json",
+          "Edit the AGENTS.md file only",
+          questions: [
+        ],
+        correct: 1,
+        explanation: "Custom instructions in github.copilot.chat.codeGeneration.instructions allow you to enforce project-specific requirements for every code generation, such as including a header comment."
+      },
+      {
+        text: "A teammate reports that Copilot Agent mode is not available in their VS Code, but it works for you. What is the most likely cause?",
+        options: [
+          "They are using an outdated Copilot extension or VS Code version",
+          "Their GitHub account is not linked",
+          "They have not installed Node.js",
+          "They are on a different Wi-Fi network"
+        ],
+        correct: 0,
+        explanation: "Agent mode requires VS Code 1.99+ and Copilot extension v1.250+. Outdated versions will not show the Agent mode toggle."
+      },
+      {
+        text: "You want to ensure all team members use the same Copilot agent configuration. What is the best way to enforce this?",
+            },
+            // --- Advanced Questions ---
+            {
+              text: "You want CCR to always flag any use of deprecated APIs in your codebase. How do you enforce this?",
+              options: [
+                "Add a custom rule in .github/copilot-review-instructions.md",
+                "Edit the AGENTS.md file",
+                "Configure this in .vscode/settings.json",
+                "Add a comment to each PR after it is opened"
+              ],
+              correct: 0,
+              explanation: "Custom rules in .github/copilot-review-instructions.md allow you to flag deprecated APIs and other team-specific patterns."
+            },
+            {
+              text: "A CCR finding is marked as 'deterministic.' What does this mean for the reviewer?",
+              options: [
+                "The finding is backed by static analysis and has zero false positives",
+                "The finding is a suggestion only",
+                "The finding must be ignored",
+                "The finding is not actionable"
+              ],
+              correct: 0,
+              explanation: "Deterministic findings are backed by CodeQL or ESLint and are guaranteed to be correct. Reviewers should treat these as authoritative."
+            },
+            {
+              text: "You want to require that all PRs reviewed by CCR include a reference to the team's security standards. How do you do this?",
+              options: [
+                "Add the file path to context_files in .github/copilot-review-config.yml",
+                "Edit the .vscode/settings.json file",
+                "Add a comment to each PR after it is opened",
+                "Configure this in AGENTS.md only"
+              ],
+              correct: 0,
+              explanation: "context_files in .github/copilot-review-config.yml ensures CCR uses your security standards as review context for every PR."
+            },
+            {
+              text: "A PR is blocked from merging because CCR found a high severity issue. What is the correct next step?",
+              options: [
+                "Fix the issue and push a new commit",
+                "Override the block in GitHub settings",
+                "Close the PR and open a new one",
+                "Ignore the finding and merge anyway"
+              ],
+              correct: 0,
+              explanation: "You must fix the high severity issue and push a new commit. CCR will re-review and unblock the PR if the issue is resolved."
+            }
+        options: [
+          "Share your global VS Code settings.json",
+          "Commit a .vscode/settings.json file to the project root",
+          "Send everyone a screenshot of your settings",
+          "Add instructions to the README only"
+        ],
+        correct: 1,
+        explanation: ".vscode/settings.json at the project root ensures all contributors use the same workspace-level Copilot configuration."
+      },
+      {
+        text: "After enabling agent mode, you notice Copilot is not running terminal commands as expected. Which setting should you check?",
+        options: [
+          "github.copilot.chat.agent.runTasks",
+          "github.copilot.chat.agent.autoFix",
+          "github.copilot.agentMode",
+          questions: [
+        ],
+        correct: 0,
+        explanation: "github.copilot.chat.agent.runTasks must be enabled for the agent to execute terminal commands as part of its workflow."
+      }
       }
     ]
   }
@@ -197,6 +289,98 @@ Jest. Run the tests and fix any failures.</pre></div>
         {
           lang: "prompt",
           title: "Local Agent Prompt",
+            },
+            // --- Advanced Questions ---
+            {
+              text: "You want to run a long-running agent task that requires access to a private npm registry. Which mode(s) can support this?",
+              options: [
+                "Local and Background modes only",
+                "Cloud mode only",
+                "All modes support private registries",
+                "None — agents cannot access private registries"
+              ],
+              correct: 0,
+            },
+            // --- Advanced Questions ---
+            {
+              text: "You want the Coding Agent to always include a security checklist in every PR it opens. How do you enforce this?",
+              options: [
+                "Add a requirement in AGENTS.md for PR templates",
+                "Edit the .vscode/settings.json file",
+                "Add a comment to each PR after it is opened",
+                "Configure this in GitHub repository settings only"
+              ],
+              correct: 0,
+              explanation: "AGENTS.md can specify requirements for PR content, such as including a security checklist. The agent will follow these instructions when opening PRs."
+            },
+            {
+              text: "A Coding Agent PR introduces a breaking API change but does not update the documentation. What is the best review comment to leave?",
+              options: [
+                "'Please update the API documentation in docs/api.md to reflect the breaking change.'",
+                "'This PR looks good.'",
+                "'Can you add more tests?'",
+                "'Please revert the change.'"
+              ],
+              correct: 0,
+              explanation: "Specific, actionable review comments (e.g., update docs/api.md) are best. The agent will read and act on these instructions."
+            },
+            {
+              text: "You want to prevent the Coding Agent from modifying files outside the /api directory. How do you specify this?",
+              options: [
+                "Add a constraint in AGENTS.md: 'Limit changes to /api directory only.'",
+                "Edit the .github/copilot-review-instructions.md file",
+                "Set a VS Code workspace setting",
+                "Add a comment to each PR after it is opened"
+              ],
+              correct: 0,
+              explanation: "AGENTS.md can specify directory constraints for the agent. This ensures changes are scoped as required."
+            },
+            {
+              text: "A Coding Agent PR contains tests that only cover the happy path. What is the best way to ensure better coverage in future PRs?",
+              options: [
+                "Add a requirement in AGENTS.md for error and edge case tests",
+                "Edit the .vscode/settings.json file",
+                "Leave a generic review comment",
+                "Rely on the agent's default behavior"
+              ],
+              correct: 0,
+              explanation: "AGENTS.md can require the agent to include error and edge case tests in all PRs. This improves test quality and coverage."
+            }
+              explanation: "Only Local and Background modes run on your machine and can access private registries configured in your environment. Cloud mode is sandboxed and cannot access private resources."
+            },
+            {
+              text: "A background agent task is running but you need to stop it immediately. What is the correct action?",
+              options: [
+                "Close VS Code",
+                "Use the Background Tasks panel to interrupt or cancel the task",
+                questions: [
+                "Switch to Cloud mode and re-run"
+              ],
+              correct: 1,
+              explanation: "The Background Tasks panel in VS Code allows you to monitor and interrupt running agent tasks without closing your editor."
+            },
+            {
+              text: "You want to ensure that a Cloud Coding Agent PR does not introduce any dependency on a package not already in package.json. How do you enforce this?",
+              options: [
+                "Add a constraint in AGENTS.md: 'Do not add new dependencies unless approved.'",
+                "Rely on the agent's default behavior",
+                "Add a GitHub Action to block PRs with package.json changes",
+                "Only use Local mode for such tasks"
+              ],
+              correct: 0,
+              explanation: "AGENTS.md can specify constraints for the agent, such as prohibiting new dependencies. The agent will follow these instructions when generating PRs."
+            },
+            {
+              text: "You want to run a test suite in the background while continuing to code. Which agent mode and VS Code feature should you use?",
+              options: [
+                "Cloud mode with GitHub Actions",
+                "Background mode with the Background Tasks panel",
+                "Local mode with the Problems panel",
+                "Background mode with the Output panel"
+              ],
+              correct: 1,
+              explanation: "Background mode lets you run long-running tasks like test suites while you continue working. The Background Tasks panel provides real-time monitoring and control."
+            }
           code: `Create a RESTful Express.js API with the following endpoints:
 - GET /api/users — returns a list of users
 - POST /api/users — creates a new user
@@ -224,6 +408,52 @@ Run the server and test each endpoint with curl.`
       <h4>Start a task in Agent Mode</h4>
       <p>Open Copilot Chat in Agent mode (Ctrl+Shift+I → switch to Agent). Type your task prompt. Before pressing Enter, click the <strong>▾</strong> dropdown next to the send button and select <strong>"Run in Background"</strong>.</p>
     </div>
+                  },
+                  // --- Advanced Questions ---
+                  {
+                    text: "You want to ensure every agent prompt includes a rollback plan for failed deployments. How do you enforce this in your issue templates?",
+                    options: [
+                      "Add a required 'Rollback Plan' field in the issue template YAML",
+                      "Add a comment to each issue after creation",
+                      "Edit the AGENTS.md file only",
+                      "Configure this in .vscode/settings.json"
+                    ],
+                    correct: 0,
+                    explanation: "Adding a required 'Rollback Plan' field in the issue template YAML ensures every issue includes rollback instructions for the agent."
+                  },
+                  {
+                    text: "A teammate writes an agent prompt: 'Improve performance.' What is the best way to clarify this requirement?",
+                    options: [
+                      "Ask for specific metrics, affected endpoints, and target performance goals",
+                      "Rewrite the prompt to be shorter",
+                      "Add a diagram",
+                      "Assign the issue to yourself"
+                    ],
+                    correct: 0,
+                    explanation: "Effective agent prompts specify metrics, affected code, and target outcomes. This removes ambiguity and enables the agent to deliver measurable results."
+                  },
+                  {
+                    text: "You want to prevent agents from modifying database migration files. Where should you specify this?",
+                    options: [
+                      "Constraints & Notes section of the issue template",
+                      "Acceptance Criteria section",
+                      "Requirements section",
+                      "In the PR description"
+                    ],
+                    correct: 0,
+                    explanation: "Constraints & Notes is the correct place to specify restrictions like 'Do not modify migration files.'"
+                  },
+                  {
+                    text: "You want agents to document their reasoning for any ambiguous decision. What pattern should you add to your issue templates?",
+                    options: [
+                      "The 'Agent Clarification' pattern",
+                      "A required screenshot field",
+                      "A code block for every decision",
+                      "A rollback plan section"
+                    ],
+                    correct: 0,
+                    explanation: "The 'Agent Clarification' pattern instructs agents to document their reasoning when making decisions not covered by requirements."
+                  }
   </div>
   <div class="step">
     <div class="step-num">2</div>
@@ -238,7 +468,7 @@ Run the server and test each endpoint with curl.`
       <h4>Review or interrupt</h4>
       <p>You can interrupt a background task at any point. When it completes, VS Code shows a notification with a summary of what changed. Review and accept or reject the edits.</p>
     </div>
-  </div>
+    questions: [
 </div>`,
       codeBlocks: [
         {
@@ -293,6 +523,52 @@ I will review and run the actual test-writing in a second pass.`
 </div>`
     },
     {
+      },
+      // --- Advanced Questions ---
+      {
+        text: "You want the Plan Agent to always sequence database migration files before application code changes. How do you specify this?",
+        options: [
+          "Add a step ordering constraint in your #plan prompt or AGENTS.md",
+          "Edit the .vscode/settings.json file",
+          "Add a comment to the PR after plan generation",
+          "Configure this in GitHub repository settings only"
+        ],
+        correct: 0,
+        explanation: "You can specify step ordering constraints in your #plan prompt or AGENTS.md. The Plan Agent will respect these when generating the implementation plan."
+      },
+      {
+        text: "A Plan Agent-generated plan includes a risky refactor in Step 2. What is the best way to modify the plan before execution?",
+        options: [
+          "Reply with specific modifications to the plan, explaining what to change and why",
+          "Approve the plan as-is",
+          "Reject the plan without explanation",
+          "Edit the code yourself before the agent runs"
+        ],
+        correct: 0,
+        explanation: "You can reply to the plan with specific modifications, such as removing or reordering steps. The agent will update the plan before executing."
+      },
+      {
+        text: "You want the Plan Agent to generate a rollback plan for every multi-file change. How do you enforce this?",
+        options: [
+          "Add a requirement in AGENTS.md or your #plan prompt for rollback steps",
+          "Edit the .github/copilot-review-instructions.md file",
+          "Set a VS Code workspace setting",
+          "Add a comment to each PR after it is opened"
+        ],
+        correct: 0,
+        explanation: "AGENTS.md or your #plan prompt can require the agent to include rollback steps in every plan."
+      },
+      {
+        text: "A Plan Agent plan includes a step to update tests before refactoring the code. What is the risk of this ordering?",
+        options: [
+          "Tests may not match the code after refactor, leading to false positives or negatives",
+          "There is no risk — test updates should always come first",
+          "It will speed up the process",
+          "It is required by Copilot"
+        ],
+        correct: 0,
+        explanation: "Updating tests before refactoring can cause tests to become out of sync with the code, leading to inaccurate test results. Tests should be updated after code changes."
+      }
       title: "💻 Comparison in Practice",
       content: `<p>Here is a practical comparison showing how the same task would be handled differently in each mode:</p>`,
       codeBlocks: [
@@ -380,7 +656,7 @@ I will review and run the actual test-writing in a second pass.`
         options: [
           "gh issue assign 42 --to copilot",
           "gh issue edit 42 --add-assignee @copilot",
-          "gh copilot assign 42",
+          questions: [
           "gh issue copilot-assign 42"
         ],
         correct: 1,
@@ -435,6 +711,52 @@ Our Express.js API currently has no authentication.
 We need JWT-based auth middleware for protected routes.
 
 ### Requirements
+            },
+            // --- Advanced Questions ---
+            {
+              text: "You want every Copilot-generated PR summary to include a section on 'Potential Risks'. How do you enforce this?",
+              options: [
+                "Add a system prompt in your PR summary workflow instructing Copilot to include a 'Potential Risks' section",
+                "Edit the AGENTS.md file only",
+                "Add a comment to each PR after it is opened",
+                "Configure this in .vscode/settings.json"
+              ],
+              correct: 0,
+              explanation: "A system prompt in your PR summary workflow can instruct Copilot to always include a 'Potential Risks' section in generated summaries."
+            },
+            {
+              text: "A Copilot-generated changelog entry misclassifies a bug fix as a feature. What is the best way to prevent this?",
+              options: [
+                "Use clear, consistent PR labels (e.g., 'bug', 'feature') and enforce labeling in your workflow",
+                "Edit the AGENTS.md file",
+                "Rely on Copilot's default behavior",
+                "Add a comment to each PR after it is merged"
+              ],
+              correct: 0,
+              explanation: "Consistent PR labeling ensures Copilot and automation scripts can accurately categorize changes in the changelog."
+            },
+            {
+              text: "You want to validate that all files mentioned in a Copilot-generated summary actually exist in the diff. What is the best approach?",
+              options: [
+                "Extract file paths from the summary and cross-reference with the changed files list before posting",
+                "Trust Copilot's output by default",
+                "Edit the AGENTS.md file",
+                "Add a comment to each PR after it is opened"
+              ],
+              correct: 0,
+              explanation: "Extracting file paths from the summary and cross-referencing with the actual changed files ensures accuracy and prevents hallucinated references."
+            },
+            {
+              text: "You want Copilot to generate documentation for every exported function in a PR. How do you enforce this?",
+              options: [
+                "Add a system prompt or AGENTS.md requirement for function-level documentation in PRs",
+                "Edit the .vscode/settings.json file",
+                "Add a comment to each PR after it is opened",
+                "Configure this in .github/copilot-review-instructions.md only"
+              ],
+              correct: 0,
+              explanation: "A system prompt or AGENTS.md requirement can instruct Copilot to generate documentation for every exported function in PRs."
+            }
 - Create middleware/auth.js with JWT verification
 - Token should be passed in Authorization: Bearer <token>
 - Verify against JWT_SECRET from environment variables
