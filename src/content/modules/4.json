@@ -1,0 +1,104 @@
+{
+  "id": 4,
+  "workshop": 1,
+  "title": "Crafting Effective Agent Prompts & Issue Templates",
+  "time": "45 min",
+  "objectives": [
+    "Apply prompt engineering principles to agentic workflows",
+    "Create reusable GitHub Issue templates for common agent tasks",
+    "Understand what makes a prompt effective vs. ineffective for agents",
+    "Build a library of templates for your team"
+  ],
+  "sections": [
+    {
+      "title": "🔍 Prompt Engineering for Agents vs. Chat",
+      "content": "<p>Prompting an <strong>agent</strong> is fundamentally different from prompting a chat model. With a chat, you're asking for information. With an agent, you're delegating a <em>task</em>. This requires a different structure.</p>\n<table class=\"content-table\">\n  <tr><th>Aspect</th><th>Chat Prompt</th><th>Agent Prompt</th></tr>\n  <tr><td>Goal</td><td>Get an answer</td><td>Complete a task</td></tr>\n  <tr><td>Structure</td><td>A question</td><td>Requirements + constraints + context</td></tr>\n  <tr><td>Output</td><td>Text response</td><td>Code changes, files, executed commands</td></tr>\n  <tr><td>Iteration</td><td>Follow-up questions</td><td>Acceptance criteria to self-check</td></tr>\n</table>"
+    },
+    {
+      "title": "📋 GitHub Issue Template for Agent Tasks",
+      "content": "<p>Create a <code>.github/ISSUE_TEMPLATE/copilot-task.yml</code> file in your repository to standardize how your team writes issues for the Coding Agent:</p>",
+      "codeBlocks": [
+        {
+          "lang": "yaml",
+          "title": ".github/ISSUE_TEMPLATE/copilot-task.yml",
+          "code": "name: \"Copilot Agent Task\"\ndescription: \"Task template optimized for the GitHub Copilot Coding Agent\"\ntitle: \"[Agent] \"\nlabels: [\"copilot-agent\"]\nassignees:\n  - copilot\nbody:\n  - type: textarea\n    id: context\n    attributes:\n      label: \"Context & Background\"\n      description: \"What does the agent need to know about the codebase?\"\n      placeholder: \"Our API uses Express.js with PostgreSQL...\"\n    validations:\n      required: true\n  - type: textarea\n    id: requirements\n    attributes:\n      label: \"Requirements\"\n      description: \"List specific, measurable requirements\"\n      placeholder: |\n        - Create a new endpoint GET /api/reports\n        - Use the existing Report model in models/report.js\n    validations:\n      required: true\n  - type: textarea\n    id: acceptance\n    attributes:\n      label: \"Acceptance Criteria\"\n      description: \"How will we know the task is complete?\"\n      placeholder: |\n        - [ ] Endpoint returns paginated results\n        - [ ] Unit tests pass with 90%+ coverage\n    validations:\n      required: true\n  - type: textarea\n    id: constraints\n    attributes:\n      label: \"Constraints & Notes\"\n      description: \"Any restrictions or patterns to follow?\"\n      placeholder: \"Do not modify existing migration files...\""
+        }
+      ],
+      "image": "m4_issue_template.png"
+    },
+    {
+      "title": "❌ vs ✅ Prompt Comparison",
+      "content": "<div class=\"concept-box warning\">\n  <h4>❌ Bad Prompt</h4>\n  <p>\"Fix the user registration\" — This is vague. What's broken? What should change? The agent has no criteria for success.</p>\n</div>\n<div class=\"concept-box tip\">\n  <h4>✅ Good Prompt</h4>\n  <p>\"The POST /api/register endpoint accepts duplicate email addresses. Add a unique constraint check before creating the user. Return a 409 Conflict with message 'Email already registered' if the email exists. Add a test case for duplicate registration. File: routes/auth.js, line ~45.\"</p>\n</div>\n<p>The key differences: <strong>specificity</strong> (exact endpoint, exact behavior), <strong>context</strong> (file location), <strong>acceptance criteria</strong> (expected response code and message), and <strong>scope</strong> (includes test requirement).</p>"
+    },
+    {
+      "title": "⚠️ Handling Ambiguous Requirements",
+      "content": "<p>Real-world issues are rarely perfectly specified. Requirements may be contradictory, incomplete, or make assumptions that aren't true. A well-written agent task anticipates this and either resolves the ambiguity upfront or gives the agent explicit instructions for how to handle uncertainty.</p>\n<table class=\"data-table\">\n  <thead><tr><th>Ambiguity Type</th><th>Example</th><th>How to Handle in the Issue</th></tr></thead>\n  <tbody>\n    <tr><td>Missing edge case</td><td>\"Add pagination\" — but what if there are 0 results?</td><td>Add: \"If results are empty, return <code>{\"data\": [], \"total\": 0, \"page\": 1}</code>\"</td></tr>\n    <tr><td>Conflicting requirements</td><td>\"Validate email format\" — but existing users have non-standard emails</td><td>Add: \"Validate on new registrations only; do NOT validate existing records\"</td></tr>\n    <tr><td>Missing file location</td><td>\"Update the error handler\" — which one?</td><td>Add the exact path: \"File: middleware/globalErrorHandler.js\"</td></tr>\n    <tr><td>Unclear scope</td><td>\"Improve performance\" — of what?</td><td>Scope explicitly: \"Optimise the GET /api/users query. Current p95 latency: 800ms. Target: under 200ms\"</td></tr>\n    <tr><td>Agent needs to choose</td><td>\"Add caching\" — Redis, in-memory, or CDN?</td><td>State the constraint: \"Use the existing Redis client in lib/cache.js. Do not add new dependencies\"</td></tr>\n  </tbody>\n</table>\n<div class=\"concept-box tip\">\n  <h4>✅ The \"Agent Clarification\" Pattern</h4>\n  <p>For tasks where some decisions genuinely belong to the agent, add this line to your issue:<br><br>\n  <em>\"If you encounter a decision point not covered by these requirements, choose the approach that best follows the patterns in the existing codebase and document your reasoning in a comment.\"</em><br><br>\n  This prevents the agent from blocking or guessing silently — it will implement and explain.</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "yaml",
+          "title": ".github/ISSUE_TEMPLATE/copilot-bugfix.yml — Bug Fix Template",
+          "code": "name: \"Copilot Bug Fix\"\ndescription: \"Bug fix template for the Copilot Coding Agent\"\ntitle: \"[Bug Fix] \"\nlabels: [\"bug\", \"copilot-agent\"]\nassignees:\n  - copilot\nbody:\n  - type: textarea\n    id: bug_description\n    attributes:\n      label: \"Bug Description\"\n      description: \"What is happening vs what should happen?\"\n      placeholder: |\n        ACTUAL: POST /api/login returns 200 even for invalid passwords\n        EXPECTED: Should return 401 with message \"Invalid credentials\"\n    validations:\n      required: true\n  - type: textarea\n    id: reproduction\n    attributes:\n      label: \"Steps to Reproduce\"\n      placeholder: |\n        1. Call POST /api/login with {\"email\":\"a@b.com\",\"password\":\"wrong\"}\n        2. Response is 200 OK (should be 401)\n    validations:\n      required: true\n  - type: textarea\n    id: root_cause\n    attributes:\n      label: \"Suspected Root Cause & Files\"\n      placeholder: |\n        Likely in: services/authService.js — comparePassword() may not await correctly\n        Also check: routes/auth.js around line 40\n  - type: textarea\n    id: fix_constraints\n    attributes:\n      label: \"Fix Constraints\"\n      placeholder: |\n        - Do NOT change the response schema — just fix the status code\n        - Add a regression test for invalid password\n        - Do not modify migration files"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the most critical element of an effective agent prompt?",
+        "options": [
+          "Using formal language",
+          "Keeping it as short as possible",
+          "Specific, measurable acceptance criteria",
+          "Including diagrams"
+        ],
+        "correct": 2,
+        "explanation": "Acceptance criteria give the agent a way to self-verify its work. Without them, the agent doesn't know when the task is truly complete."
+      },
+      {
+        "text": "Where should reusable issue templates for the Coding Agent be stored?",
+        "options": [
+          "In a shared Google Doc",
+          ".github/ISSUE_TEMPLATE/ directory",
+          "In the project's README.md",
+          "In the VS Code settings"
+        ],
+        "correct": 1,
+        "explanation": "GitHub Issue templates live in the .github/ISSUE_TEMPLATE/ directory and are automatically available when creating new issues."
+      },
+      {
+        "text": "Your issue template YAML has `assignees: [copilot]`. What does this do?",
+        "options": [
+          "It mentions @copilot in a comment",
+          "It automatically assigns every new issue created with this template to the Copilot Coding Agent",
+          "It grants Copilot write access to the repository",
+          "It adds a copilot label to the issue"
+        ],
+        "correct": 1,
+        "explanation": "The assignees field in a GitHub Issue template YAML pre-fills the assignee. Setting it to 'copilot' means every issue created from this template is automatically assigned to the Copilot Coding Agent."
+      },
+      {
+        "text": "An agent prompt says 'Add validation to the form'. What two critical elements are missing?",
+        "options": [
+          "File path and function name",
+          "Specific validation rules/constraints AND acceptance criteria (expected behavior for valid/invalid inputs)",
+          "A code example and a screenshot",
+          "The programming language and framework"
+        ],
+        "correct": 1,
+        "explanation": "Without specific rules (what to validate, valid ranges, format requirements) and acceptance criteria (expected HTTP responses, error message format), the agent can't determine what 'done' looks like."
+      },
+      {
+        "text": "Which section of a well-structured agent issue prevents it from modifying files outside its scope?",
+        "options": [
+          "Context & Background",
+          "Requirements",
+          "Constraints & Notes (e.g. 'Do not modify existing migration files')",
+          "Acceptance Criteria"
+        ],
+        "correct": 2,
+        "explanation": "The Constraints & Notes section explicitly tells the agent what it must NOT do. This prevents the agent from accidentally modifying unrelated files or breaking existing behavior."
+      }
+    ]
+  }
+}

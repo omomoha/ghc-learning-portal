@@ -1,0 +1,104 @@
+{
+  "id": 13,
+  "workshop": 2,
+  "title": "Tool Calling: Building AI-Powered Integrations",
+  "time": "55 min",
+  "objectives": [
+    "Understand the tool calling pattern in AI applications",
+    "Build tools that AI agents can invoke with structured inputs",
+    "Handle tool results and error states properly",
+    "Design tools that are safe and predictable"
+  ],
+  "sections": [
+    {
+      "title": "🔍 How Tool Calling Works",
+      "content": "<p><strong>Tool calling</strong> is the mechanism by which an AI model requests to use an external function. Instead of guessing an answer, the model says \"I need to call this tool with these parameters to get the real data.\"</p>\n<p>The flow is: (1) User asks a question → (2) Model decides it needs a tool → (3) Model outputs a structured tool call → (4) Your code executes the tool → (5) Result is sent back to the model → (6) Model formulates the final answer.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Why Tool Calling Matters</h4>\n  <p>Without tools, AI models can only use their training data. With tools, they can access real-time data (APIs, databases), perform calculations, interact with services (send emails, create tickets), and take actions in the real world. This is what makes agents <em>agentic</em>.</p>\n</div>"
+    },
+    {
+      "title": "💻 Building Tools in Node.js",
+      "content": "<p>Here's how to define tools that an MCP server exposes to AI agents. Each tool needs a name, description, input schema, and handler function:</p>",
+      "codeBlocks": [
+        {
+          "lang": "javascript",
+          "title": "tools/deploymentTool.js — Deployment Status Tool",
+          "code": "import { z } from \"zod\";\n\nexport const deploymentTools = {\n  // Tool 1: Check deployment status\n  check_deployment: {\n    description: \"Check the current deployment status of a service\",\n    schema: {\n      service: z.string().describe(\"Service name (e.g., api, web, worker)\"),\n      environment: z.enum([\"staging\", \"production\"]).describe(\"Target environment\")\n    },\n    handler: async ({ service, environment }) => {\n      const response = await fetch(\n        `https://deploy-api.internal/status/${environment}/${service}`\n      );\n      const status = await response.json();\n      return {\n        content: [{\n          type: \"text\",\n          text: JSON.stringify({\n            service,\n            environment,\n            version: status.version,\n            status: status.healthy ? \"✅ Healthy\" : \"❌ Unhealthy\",\n            lastDeployed: status.last_deploy,\n            uptime: status.uptime_hours + \" hours\"\n          }, null, 2)\n        }]\n      };\n    }\n  },\n\n  // Tool 2: List recent deployments\n  list_deployments: {\n    description: \"List recent deployments for a service\",\n    schema: {\n      service: z.string(),\n      limit: z.number().default(5)\n    },\n    handler: async ({ service, limit }) => {\n      const response = await fetch(\n        `https://deploy-api.internal/history/${service}?limit=${limit}`\n      );\n      const deploys = await response.json();\n      return {\n        content: [{\n          type: \"text\",\n          text: deploys.map(d =>\n            `[${d.timestamp}] v${d.version} → ${d.environment} by ${d.deployer}`\n          ).join(\"\\n\")\n        }]\n      };\n    }\n  }\n};"
+        }
+      ],
+      "image": "m13_tool_calling.png"
+    },
+    {
+      "title": "🐍 Python Tool Calling Example",
+      "content": "",
+      "codeBlocks": [
+        {
+          "lang": "python",
+          "title": "tools/monitoring.py — Monitoring Tools",
+          "code": "from mcp.server.fastmcp import FastMCP\nfrom datetime import datetime, timedelta\nimport httpx\n\nmcp = FastMCP(\"monitoring-tools\")\n\n@mcp.tool()\nasync def get_error_rate(\n    service: str,\n    period_hours: int = 1\n) -> str:\n    \"\"\"Get the error rate for a service over the specified period.\n\n    Args:\n        service: Name of the service to check\n        period_hours: Number of hours to look back (default: 1)\n    \"\"\"\n    async with httpx.AsyncClient() as client:\n        end = datetime.utcnow()\n        start = end - timedelta(hours=period_hours)\n\n        response = await client.get(\n            f\"https://metrics.internal/api/v1/query\",\n            params={\n                \"query\": f'rate(http_errors_total{{service=\"{service}\"}}[{period_hours}h])',\n                \"time\": end.isoformat()\n            }\n        )\n        data = response.json()\n\n        if data[\"data\"][\"result\"]:\n            rate = float(data[\"data\"][\"result\"][0][\"value\"][1])\n            status = \"🟢 Normal\" if rate < 0.01 else \"🔴 Elevated\"\n            return f\"Service: {service}\\nError Rate: {rate:.4%}\\nStatus: {status}\\nPeriod: Last {period_hours}h\"\n\n        return f\"No data found for service: {service}\"\n\n@mcp.tool()\nasync def get_service_health(service: str) -> str:\n    \"\"\"Check the overall health of a service including uptime,\n    latency, and error rate.\n\n    Args:\n        service: Name of the service to check\n    \"\"\"\n    async with httpx.AsyncClient() as client:\n        response = await client.get(\n            f\"https://health.internal/{service}/status\"\n        )\n        health = response.json()\n\n        return f\"\"\"Service: {service}\nStatus: {\"✅ Healthy\" if health[\"healthy\"] else \"❌ Unhealthy\"}\nUptime: {health[\"uptime_percent\"]:.2f}%\nAvg Latency: {health[\"avg_latency_ms\"]}ms\nP99 Latency: {health[\"p99_latency_ms\"]}ms\nActive Instances: {health[\"instances\"]}\"\"\"\n\nif __name__ == \"__main__\":\n    mcp.run()"
+        }
+      ]
+    },
+    {
+      "title": "🔒 Tool Safety Best Practices",
+      "content": "<div class=\"concept-box warning\">\n  <h4>⚠️ Critical Safety Rules for Tools</h4>\n  <p>1. <strong>Read-only by default:</strong> Tools should only read data unless explicitly designed for writes<br>\n  2. <strong>Input validation:</strong> Always validate and sanitize tool inputs with schemas<br>\n  3. <strong>Rate limiting:</strong> Prevent agents from calling tools excessively<br>\n  4. <strong>Audit logging:</strong> Log every tool call with timestamp, input, and caller<br>\n  5. <strong>Least privilege:</strong> Tools should have minimum necessary permissions</p>\n</div>"
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "In the tool calling flow, what happens after the AI model outputs a tool call?",
+        "options": [
+          "The model directly executes the function",
+          "Your code executes the tool and sends the result back to the model",
+          "The tool runs on GitHub's servers",
+          "The user must manually run the tool"
+        ],
+        "correct": 1,
+        "explanation": "The model outputs a structured tool call request. Your application code executes the actual tool/function and sends the result back to the model for final processing."
+      },
+      {
+        "text": "Why should tools be 'read-only by default'?",
+        "options": [
+          "To save bandwidth",
+          "Because AI is not good at writing data",
+          "To prevent agents from accidentally modifying or deleting data",
+          "Because MCP only supports read operations"
+        ],
+        "correct": 2,
+        "explanation": "Read-only by default is a safety principle. AI agents can make mistakes, so limiting tools to read-only prevents accidental data modification or deletion."
+      },
+      {
+        "text": "An agent needs to: fetch an API response, transform the data, write a file, and post to Slack. What is this called?",
+        "options": [
+          "Tool chaining — the agent sequences multiple tool calls where each output feeds the next",
+          "Tool stacking",
+          "Parallel execution",
+          "Tool overloading"
+        ],
+        "correct": 0,
+        "explanation": "Tool chaining is when an agent uses the output of one tool as input to the next, creating a sequential data pipeline. This enables complex multi-step workflows that no single tool could handle alone."
+      },
+      {
+        "text": "Why should a database deletion tool have `requireApproval: true` in its MCP configuration?",
+        "options": [
+          "Database tools are always slow",
+          "Deletion is irreversible — human confirmation prevents agents from accidentally destroying production data",
+          "GitHub requires it for all database tools",
+          "It improves tool performance"
+        ],
+        "correct": 1,
+        "explanation": "Irreversible operations (delete, drop, truncate) must have human approval gates. AI agents can misinterpret intent. requireApproval: true creates a safety checkpoint before any destructive database operation executes."
+      },
+      {
+        "text": "An agent's tool call returns a 500 error from your API. What should a well-designed tool handler return to the agent?",
+        "options": [
+          "An empty string",
+          "The raw HTTP 500 response with stack trace",
+          "A structured error object with error type, message, and suggested retry behavior",
+          "null"
+        ],
+        "correct": 2,
+        "explanation": "Well-designed tool handlers return structured error objects that help the agent understand what went wrong and what to do next. Raw stack traces leak implementation details and don't help the agent recover."
+      }
+    ]
+  }
+}

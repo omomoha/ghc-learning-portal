@@ -1,0 +1,115 @@
+{
+  "id": 8,
+  "workshop": 1,
+  "title": "Agent Handoff & Multi-Agent Collaboration",
+  "time": "50 min",
+  "objectives": [
+    "Understand the concept of agent handoff in complex workflows",
+    "Design multi-step tasks that chain multiple agent interactions",
+    "Implement a handoff pattern from Coding Agent to Code Review",
+    "Build a complete CI/CD-integrated agent workflow"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What is Agent Handoff?",
+      "content": "<p><strong>Agent Handoff</strong> is a pattern where one AI agent completes its task and passes the output to another agent for the next step. Think of it like an assembly line: the Coding Agent builds the feature, then the Code Review agent reviews it, then a documentation agent updates the docs.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Common Handoff Chains</h4>\n  <p><strong>Feature Development:</strong> Issue → Coding Agent → PR → Code Review Agent → Merge → Changelog Agent<br>\n  <strong>Bug Fix:</strong> Bug Report → Coding Agent (fix) → Test Agent (verify) → Code Review → Merge<br>\n  <strong>Refactoring:</strong> Plan Agent → Coding Agent (execute) → Code Review → Documentation Agent</p>\n</div>"
+    },
+    {
+      "title": "💻 Implementing Agent Handoff with GitHub Actions",
+      "content": "<p>Here's a complete, production-ready GitHub Actions workflow that implements an agent handoff chain. Note how each job explicitly sets outputs so the next job can consume them — this is the contract between agents:</p>",
+      "codeBlocks": [
+        {
+          "lang": "yaml",
+          "title": ".github/workflows/agent-pipeline.yml",
+          "code": "name: Agent Pipeline\non:\n  issues:\n    types: [assigned]\n\njobs:\n  # Step 1: Wait for Coding Agent to create a PR\n  wait-for-pr:\n    if: contains(github.event.issue.assignees.*.login, 'copilot')\n    runs-on: ubuntu-latest\n    outputs:\n      pr_number: ${{ steps.find-pr.outputs.pr_number }}   # ← sets output\n    steps:\n      - name: Wait for Coding Agent PR\n        id: find-pr\n        uses: actions/github-script@v7\n        with:\n          script: |\n            const issueNum = context.issue.number;\n            let prNumber = null;\n\n            // Poll up to 30 minutes (30 × 60s intervals)\n            for (let attempt = 0; attempt < 30; attempt++) {\n              const { data: prs } = await github.rest.pulls.list({\n                owner: context.repo.owner,\n                repo: context.repo.repo,\n                state: 'open',\n                head: `${context.repo.owner}:copilot/issue-${issueNum}`\n              });\n              if (prs.length > 0) {\n                prNumber = prs[0].number;\n                console.log(`✅ Copilot PR found: #${prNumber}`);\n                break;\n              }\n              console.log(`⏳ Attempt ${attempt + 1}/30 — no PR yet, waiting 60s...`);\n              await new Promise(r => setTimeout(r, 60000));\n            }\n\n            if (!prNumber) {\n              core.setFailed('❌ Coding Agent did not create a PR within 30 minutes');\n              return;\n            }\n\n            // Expose as job output for downstream jobs\n            core.setOutput('pr_number', String(prNumber));\n\n  # Step 2: Request Copilot Code Review on the PR\n  request-review:\n    needs: wait-for-pr\n    runs-on: ubuntu-latest\n    steps:\n      - name: Request CCR\n        uses: actions/github-script@v7\n        with:\n          script: |\n            const prNumber = Number('${{ needs.wait-for-pr.outputs.pr_number }}');\n            await github.rest.pulls.requestReviewers({\n              owner: context.repo.owner,\n              repo: context.repo.repo,\n              pull_number: prNumber,\n              reviewers: ['copilot']\n            });\n            console.log(`✅ CCR requested on PR #${prNumber}`);\n\n  # Step 3: Label PR based on CCR outcome (human merges manually)\n  label-pr:\n    needs: [wait-for-pr, request-review]\n    runs-on: ubuntu-latest\n    steps:\n      - name: Add 'awaiting-review' label\n        uses: actions/github-script@v7\n        with:\n          script: |\n            const prNumber = Number('${{ needs.wait-for-pr.outputs.pr_number }}');\n            await github.rest.issues.addLabels({\n              owner: context.repo.owner,\n              repo: context.repo.repo,\n              issue_number: prNumber,\n              labels: ['copilot-generated', 'awaiting-review']\n            });\n            // Post status comment\n            await github.rest.issues.createComment({\n              owner: context.repo.owner,\n              repo: context.repo.repo,\n              issue_number: prNumber,\n              body: '🤖 **Agent Pipeline Complete**\\n\\nCopilot has implemented this issue and CCR review is in progress. A human reviewer must approve before merging.'\n            });"
+        }
+      ],
+      "image": "m8_agent_handoff.png"
+    },
+    {
+      "title": "🚨 Error Handling & Failure Recovery",
+      "content": "<p>Agentic workflows fail. Networks time out, the Coding Agent misunderstands requirements, CCR blocks a PR, or the agent silently produces incomplete code. You must build recovery strategies into every pipeline.</p>\n<table class=\"data-table\">\n  <thead><tr><th>Failure Mode</th><th>Detection Signal</th><th>Recovery Strategy</th></tr></thead>\n  <tbody>\n    <tr><td>Agent doesn't create PR in time</td><td>Polling loop exhausted (30 attempts)</td><td><code>core.setFailed()</code> → creates GitHub Actions failure notification; re-assign issue</td></tr>\n    <tr><td>Agent creates PR but tests fail</td><td>CI status checks red on PR</td><td>Post <code>@copilot the tests are failing, please fix</code> comment → triggers another agent iteration</td></tr>\n    <tr><td>CCR blocks PR with severity:high</td><td>CCR posts blocking review</td><td>Post <code>@copilot fix this</code> in the CCR comment (Agent Handoff Pattern)</td></tr>\n    <tr><td>Agent opens PR to wrong base branch</td><td>PR targets <code>main</code> instead of feature branch</td><td>Close PR, reopen issue with explicit base branch constraint in AGENTS.md</td></tr>\n    <tr><td>Agent loops on same error</td><td>3+ identical commits in PR history</td><td>Add <code>max_iterations: 3</code> to AGENTS.md; escalate to human</td></tr>\n  </tbody>\n</table>",
+      "codeBlocks": [
+        {
+          "lang": "yaml",
+          "title": "AGENTS.md — Failure & Loop Prevention",
+          "code": "# AGENTS.md for payments-service\n\n## Failure Handling\n- If tests fail after 3 fix attempts, stop and comment: \"I need human guidance on [specific error]\"\n- Never delete tests to make them pass\n- If you cannot find a file you expect to exist, comment and halt — do not create placeholder files\n\n## Loop Prevention\n- Maximum 3 iterations on the same failing test\n- Maximum 5 total commits per issue assignment\n- If you exceed these limits, post a summary of what you tried and request human review\n\n## Escalation Protocol\nWhen you cannot proceed, post this format:\n```\n🛑 **Agent Blocked**\n- **Task**: [what you were trying to do]\n- **Blocker**: [specific error or ambiguity]\n- **Attempts**: [what you tried]\n- **Needs**: [what human input would unblock this]\n```"
+        }
+      ]
+    },
+    {
+      "title": "🔭 Debugging Agentic Workflows",
+      "content": "<p>When an agent behaves unexpectedly, you need a systematic debugging approach. Unlike traditional code, the \"bug\" may be in the instructions, the context provided, or the agent's interpretation — not in the code itself.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Debugging Checklist</h4>\n  <p><strong>1. Read the agent's session log</strong> — In VS Code Agent Mode, expand the tool calls in the chat panel. Every file read, command run, and edit attempt is logged.<br><br>\n  <strong>2. Check what context the agent had</strong> — Did it read the right files? In the Coding Agent, check the PR's \"Copilot Session\" tab to see exactly which files were in context.<br><br>\n  <strong>3. Look for the first wrong decision</strong> — Agents cascade errors. Find the earliest point where the agent's reasoning diverged from your intent.<br><br>\n  <strong>4. Test your AGENTS.md instruction</strong> — Ask the agent directly: \"Given your AGENTS.md, how would you approach [problem]?\" Its answer reveals how it's interpreting your instructions.<br><br>\n  <strong>5. Reduce scope and retry</strong> — If the agent fails a complex task, break it into smaller issues. Each issue should be completable in ~20 minutes with a focused scope.</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "bash",
+          "title": "Inspecting Coding Agent Activity via GitHub CLI",
+          "code": "# List all PRs created by Copilot in the last 30 days\ngh pr list --author \"app/github-copilot\" --state all --json number,title,createdAt,state\n\n# View the commits in a Copilot PR to trace agent decisions\ngh pr view 42 --json commits --jq '.commits[] | {sha: .oid[0:7], msg: .messageHeadline}'\n\n# See the exact files changed by the agent\ngh pr diff 42 --name-only\n\n# View PR review comments (CCR findings the agent needed to fix)\ngh api repos/{owner}/{repo}/pulls/42/comments --jq '.[] | {file: .path, line: .line, body: .body[0:100]}'\n\n# Check if agent is currently working on an issue\ngh issue view 18 --json assignees,comments --jq '{assignees: [.assignees[].login], last_comment: .comments[-1].body[0:200]}'"
+        }
+      ]
+    },
+    {
+      "title": "🛠️ Hands-On: Design Your Own Handoff Chain",
+      "content": "<p>Think about your team's workflow. Where could agent handoffs save time? Consider mapping out a chain for one of these scenarios:</p>\n<div class=\"concept-box tip\">\n  <h4>Exercise: Map Your Handoff Chain</h4>\n  <p>1. Pick a repetitive task your team does weekly<br>\n  2. Break it into distinct steps (each step = one agent's task)<br>\n  3. Define the input/output contract between each step (what does each job's <code>outputs:</code> produce?)<br>\n  4. Identify which steps need human approval vs. full automation<br>\n  5. Write the GitHub Issue that would trigger the chain<br>\n  6. Add failure handling: what happens if step 2 fails? Can step 3 still run?</p>\n</div>"
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is agent handoff?",
+        "options": [
+          "When an agent crashes and restarts",
+          "When one agent's output becomes the input for the next agent in a chain",
+          "When you switch from using Copilot to using ChatGPT",
+          "When the agent saves its state to disk"
+        ],
+        "correct": 1,
+        "explanation": "Agent handoff is a pattern where one agent completes its task and passes the output to the next agent — creating an automated pipeline of AI-powered steps."
+      },
+      {
+        "text": "In the Feature Development handoff chain, what is the typical order?",
+        "options": [
+          "Code Review → Coding Agent → Merge → Documentation",
+          "Documentation → Issue → Coding Agent → Review",
+          "Issue → Coding Agent → PR → Code Review → Merge → Changelog",
+          "Coding Agent → Issue → Deploy → Review"
+        ],
+        "correct": 2,
+        "explanation": "The standard handoff chain flows: Issue (input) → Coding Agent (implementation) → PR → Code Review (quality check) → Merge → Changelog (documentation)."
+      },
+      {
+        "text": "You have a Security Auditor agent that finds a vulnerability. How does it hand off the fix to the Coding Agent?",
+        "options": [
+          "It emails the Coding Agent",
+          "It posts a GitHub Issue or PR comment tagging @copilot with the specific finding, which the Coding Agent picks up",
+          "It directly modifies the Coding Agent's instructions",
+          "It commits a fix directly to main"
+        ],
+        "correct": 1,
+        "explanation": "Agent handoff in GitHub happens through issues and PR comments. The auditor posts a structured finding (severity, file, line, description) and tags @copilot. The Coding Agent reads the comment and pushes a fix."
+      },
+      {
+        "text": "In a multi-agent AGENTS.md, why is it essential to define explicit Permissions for each specialized agent?",
+        "options": [
+          "To improve performance",
+          "To prevent agents from accidentally modifying each other's domains or overstepping their scope",
+          "GitHub requires it for billing purposes",
+          "It's optional — agents scope themselves automatically"
+        ],
+        "correct": 1,
+        "explanation": "In multi-agent setups, agents could overlap. A Security Auditor should only read files (not write), while the Coding Agent has write permissions. Explicit Permissions in AGENTS.md prevent dangerous cross-domain modifications."
+      },
+      {
+        "text": "Which GitHub feature enables you to build a fully automated agent pipeline that triggers when an issue is assigned to @copilot?",
+        "options": [
+          "GitHub Codespaces",
+          "GitHub Actions with the issues: [assigned] trigger event",
+          "GitHub Pages",
+          "GitHub Packages"
+        ],
+        "correct": 1,
+        "explanation": "A GitHub Actions workflow with `on: issues: types: [assigned]` triggers when any issue is assigned. Combined with a check for @copilot as assignee, this creates the entry point for a fully automated agent pipeline."
+      }
+    ]
+  }
+}

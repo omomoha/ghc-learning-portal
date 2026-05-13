@@ -1,0 +1,157 @@
+{
+  "id": 16,
+  "workshop": 2,
+  "title": "Copilot Extensions & Ecosystem Integration",
+  "time": "60 min",
+  "objectives": [
+    "Build and register a custom Copilot Extension with the GitHub App manifest",
+    "Implement SSE streaming and error handling in an extension server",
+    "Measure ROI and productivity impact of your agentic platform",
+    "Design a phased organizational rollout plan for agentic workflows"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What are Copilot Extensions?",
+      "content": "<p><strong>Copilot Extensions</strong> expand what Copilot can do beyond code. They're third-party integrations that add new capabilities directly into the Copilot Chat experience. Think of them as plugins for your AI assistant.</p>\n<p>Extensions can provide: domain-specific knowledge (AWS, Azure, Kubernetes), integrations with external services (Jira, Slack, Datadog), specialized tools (design systems, API documentation), and custom workflows for your organization.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Extensions vs. MCP vs. Skills</h4>\n  <p><strong>Extensions:</strong> Third-party plugins in the Copilot marketplace — add new @agents<br>\n  <strong>MCP Servers:</strong> Custom tool servers you build and host — give agents new tools<br>\n  <strong>Skills (SKILL.md):</strong> Behavior instructions — teach agents how to work in your codebase<br>\n  All three work together to create a comprehensive AI developer platform.</p>\n</div>"
+    },
+    {
+      "title": "💻 Building a Copilot Extension",
+      "content": "<p>Here's how to build a simple Copilot Extension that integrates with your team's internal documentation:</p>",
+      "codeBlocks": [
+        {
+          "lang": "javascript",
+          "title": "extension/index.js — Custom Copilot Extension",
+          "code": "import express from 'express';\nimport { Octokit } from '@octokit/rest';\n\nconst app = express();\napp.use(express.json());\n\n// Extension endpoint that Copilot calls\napp.post('/agent', async (req, res) => {\n  const { messages, copilot_references } = req.body;\n  const userMessage = messages[messages.length - 1].content;\n\n  // Your extension logic here\n  // Example: Search internal documentation\n  const docs = await searchInternalDocs(userMessage);\n\n  // Stream response back to Copilot Chat\n  res.setHeader('Content-Type', 'text/event-stream');\n  res.setHeader('Cache-Control', 'no-cache');\n\n  // Send response in ChatCompletions streaming format\n  const response = formatDocsAsResponse(docs);\n\n  res.write(`data: ${JSON.stringify({\n    choices: [{\n      delta: { content: response },\n      finish_reason: null\n    }]\n  })}\\n\\n`);\n\n  res.write(`data: ${JSON.stringify({\n    choices: [{\n      delta: {},\n      finish_reason: \"stop\"\n    }]\n  })}\\n\\n`);\n\n  res.end();\n});\n\nasync function searchInternalDocs(query) {\n  // Connect to your documentation system\n  // (Confluence, Notion, internal wiki, etc.)\n  const results = await fetch(\n    `https://docs-api.internal/search?q=${encodeURIComponent(query)}`\n  );\n  return results.json();\n}\n\nfunction formatDocsAsResponse(docs) {\n  if (!docs.length) return \"No relevant documentation found.\";\n  return docs.map(d =>\n    `## ${d.title}\\n${d.summary}\\n[Read more](${d.url})`\n  ).join(\"\\n\\n\");\n}\n\napp.listen(3000, () => {\n  console.log(\"Copilot Extension running on port 3000\");\n});"
+        }
+      ],
+      "image": "m16_extensions.png"
+    },
+    {
+      "title": "📋 Registering Your Extension as a GitHub App",
+      "content": "<p>To make your extension available in Copilot Chat, you must register it as a GitHub App with the Copilot agent capability. This tells GitHub where to forward chat messages when users type <code>@your-extension</code>.</p>",
+      "codeBlocks": [
+        {
+          "lang": "json",
+          "title": "github-app-manifest.json — GitHub App Registration",
+          "code": "// Step 1: Register a GitHub App using the manifest below.\n// POST https://github.com/settings/apps/new (or your org: /organizations/ORG/settings/apps/new)\n// with: ?state=<csrf-token> and manifest=<URL-encoded JSON below>\n\n{\n  \"name\": \"InternalDocs Copilot Extension\",\n  \"url\": \"https://your-extension.company.com\",\n  \"hook_attributes\": {\n    \"url\": \"https://your-extension.company.com/webhook\"\n  },\n  \"redirect_url\": \"https://your-extension.company.com/callback\",\n  \"callback_urls\": [\"https://your-extension.company.com/callback\"],\n  \"public\": false,\n  \"default_permissions\": {\n    \"contents\": \"read\",\n    \"pull_requests\": \"read\",\n    \"copilot_chat\": \"write\"\n  },\n  \"default_events\": []\n}\n\n// Step 2: After the App is created, go to:\n//   GitHub.com → Settings → Developer settings → GitHub Apps → Your App → Copilot\n// Set:\n//   App Type:  \"Copilot Extension\"\n//   URL:       \"https://your-extension.company.com/agent\"\n//   Inference description: \"Use when the user asks about internal APIs or runbooks\"\n//\n// Note: The Copilot agent URL is NOT set in the manifest — it must be\n// configured in the App settings UI under the \"Copilot\" tab after creation."
+        },
+        {
+          "lang": "javascript",
+          "title": "extension/index.js — Production-Ready Extension with Error Handling",
+          "code": "import express from 'express';\n\nconst app = express();\napp.use(express.json());\n\n// Verify the request is genuinely from GitHub Copilot\nasync function verifyGitHubToken(token) {\n  const res = await fetch('https://api.github.com/user', {\n    headers: { Authorization: `Bearer ${token}` }\n  });\n  if (!res.ok) throw new Error('Invalid token');\n  return res.json();\n}\n\napp.post('/agent', async (req, res) => {\n  // 1. Authenticate the caller\n  const authToken = req.headers['x-github-token'];\n  try {\n    await verifyGitHubToken(authToken);\n  } catch {\n    return res.status(401).json({ error: 'Unauthorized' });\n  }\n\n  const { messages } = req.body;\n  const userMessage = messages[messages.length - 1].content;\n\n  // 2. Set up SSE streaming\n  res.setHeader('Content-Type', 'text/event-stream');\n  res.setHeader('Cache-Control', 'no-cache');\n  res.setHeader('Connection', 'keep-alive');\n\n  const sendChunk = (content, finish = false) => {\n    res.write(`data: ${JSON.stringify({\n      choices: [{ delta: finish ? {} : { content }, finish_reason: finish ? 'stop' : null }]\n    })}\\n\\n`);\n  };\n\n  try {\n    // 3. Process the request\n    const docs = await searchInternalDocs(userMessage);\n\n    if (!docs.length) {\n      sendChunk('No relevant documentation found. Try searching with different keywords.');\n    } else {\n      sendChunk(`Found ${docs.length} relevant documents:\\n\\n`);\n      for (const doc of docs) {\n        sendChunk(`## ${doc.title}\\n${doc.summary}\\n[Read more](${doc.url})\\n\\n`);\n      }\n    }\n\n    sendChunk('', true); // finish_reason: stop\n  } catch (err) {\n    // 4. Surface errors gracefully to the user\n    sendChunk(`⚠️ Error searching docs: ${err.message}. Please try again.`);\n    sendChunk('', true);\n  } finally {\n    res.end();\n  }\n});\n\napp.listen(3000);"
+        }
+      ]
+    },
+    {
+      "title": "📊 Measuring ROI & Productivity Impact",
+      "content": "<p>Deploying an agentic platform without measuring its impact is like shipping a feature without analytics. You need concrete metrics to justify investment, guide improvements, and report to leadership.</p>\n<table class=\"data-table\">\n  <thead><tr><th>Metric</th><th>How to Measure</th><th>Target Benchmark</th></tr></thead>\n  <tbody>\n    <tr><td>PR cycle time reduction</td><td>GitHub Insights: avg time from first commit → merge, before vs. after</td><td>30–50% reduction</td></tr>\n    <tr><td>Agent-generated code acceptance rate</td><td>Copilot usage metrics in GitHub organization settings</td><td>&gt;70% acceptance</td></tr>\n    <tr><td>Issues resolved by Coding Agent (no human code)</td><td>Count PRs with <code>author:app/github-copilot</code> that merged</td><td>Track monthly trend</td></tr>\n    <tr><td>CCR findings per PR</td><td>GitHub Security &amp; Code Scanning dashboard</td><td>Declining trend = better agent output</td></tr>\n    <tr><td>Developer time saved on documentation</td><td>Survey: time spent writing PR descriptions before/after</td><td>2–4 hrs/dev/week</td></tr>\n    <tr><td>MCP tool call success rate</td><td>Application logs: successful vs. failed tool invocations</td><td>&gt;99% uptime</td></tr>\n  </tbody>\n</table>",
+      "codeBlocks": [
+        {
+          "lang": "python",
+          "title": "scripts/roi_dashboard.py — ROI Metrics Collector",
+          "code": "\"\"\"Collect and report agentic workflow ROI metrics from GitHub.\"\"\"\nimport os\nfrom datetime import datetime, timezone, timedelta\nfrom github import Github  # pip install PyGithub\n\ngh = Github(os.environ['GITHUB_TOKEN'])\nrepo = gh.get_repo(os.environ['GITHUB_REPO'])  # e.g. \"myorg/myrepo\"\n\ndef get_copilot_pr_metrics(days=30):\n    # timezone.utc required: PyGithub returns timezone-aware datetimes;\n    # datetime.now() without tz is naive and raises TypeError on comparison\n    since = datetime.now(timezone.utc) - timedelta(days=days)\n    all_prs = repo.get_pulls(state='closed', sort='updated', direction='desc')\n\n    copilot_prs = []\n    total_prs = 0\n\n    for pr in all_prs:\n        if pr.created_at < since:\n            break\n        total_prs += 1\n        if pr.user.login == 'github-copilot[bot]' or 'copilot' in pr.user.login.lower():\n            cycle_hours = (pr.merged_at - pr.created_at).total_seconds() / 3600 if pr.merged_at else None\n            copilot_prs.append({\n                'number': pr.number,\n                'title': pr.title,\n                'cycle_hours': round(cycle_hours, 1) if cycle_hours else 'unmerged',\n                'additions': pr.additions,\n                'deletions': pr.deletions\n            })\n\n    agent_adoption = len(copilot_prs) / total_prs * 100 if total_prs else 0\n\n    print(f\"\\n📊 Agentic Workflow ROI Report ({days} days)\")\n    print(f\"{'='*45}\")\n    print(f\"Total PRs:               {total_prs}\")\n    print(f\"Copilot-authored PRs:    {len(copilot_prs)} ({agent_adoption:.1f}%)\")\n    if copilot_prs:\n        merged = [p for p in copilot_prs if isinstance(p['cycle_hours'], float)]\n        avg_cycle = sum(p['cycle_hours'] for p in merged) / len(merged) if merged else 0\n        print(f\"Avg cycle time (agent):  {avg_cycle:.1f} hrs\")\n    return copilot_prs\n\nif __name__ == '__main__':\n    get_copilot_pr_metrics(days=30)"
+        }
+      ]
+    },
+    {
+      "title": "🚀 Organizational Rollout Strategy",
+      "content": "<p>Rolling out agentic AI to a large engineering team requires change management, not just technical deployment. Resistance, misuse, and over-trust are real risks. Use a phased approach:</p>\n<div class=\"concept-box info\">\n  <h4>💡 Phased Rollout: 4-Stage Model</h4>\n  <p><strong>Phase 1 — Champion Team (Weeks 1–4):</strong> 3–5 volunteer engineers. Full access to agent mode, MCP, and CCR. Weekly retrospectives. Build internal playbook.<br><br>\n  <strong>Phase 2 — Controlled Expansion (Weeks 5–8):</strong> 20–30% of engineering. Share playbook. Human-in-the-loop required for all agent-merged PRs. Measure metrics.<br><br>\n  <strong>Phase 3 — Broad Rollout (Weeks 9–12):</strong> All teams. Mandatory AGENTS.md for all repos. CCR enabled by default. Agentic skills in onboarding.<br><br>\n  <strong>Phase 4 — Optimize & Govern (Ongoing):</strong> Audit logs reviewed monthly. Model selection optimized by use case. Custom extensions for domain-specific workflows.</p>\n</div>\n<div class=\"concept-box tip\">\n  <h4>⚠️ Common Rollout Mistakes</h4>\n  <p>• <strong>Skipping Phase 1:</strong> Without a champion team, you have no internal expertise to support others<br>\n  • <strong>No AGENTS.md standards:</strong> Each team invents their own → inconsistent quality and security gaps<br>\n  • <strong>Over-automation too fast:</strong> Auto-merging agent PRs before trust is established → prod incidents<br>\n  • <strong>No metrics baseline:</strong> Without before-state data, you can't prove ROI<br>\n  • <strong>Ignoring skeptics:</strong> Engineers who resist AI-generated code often have valid concerns — listen and address them</p>\n</div>"
+    },
+    {
+      "title": "🏗️ Bringing It All Together",
+      "content": "<p>Here's how extensions, MCP, and skills combine to create a complete AI developer platform for your organization:</p>",
+      "codeBlocks": [
+        {
+          "lang": "yaml",
+          "title": "The Complete AI Developer Platform Stack",
+          "code": "# Your Organization's AI Developer Platform\n\nExtensions (Marketplace):\n  - @jira        # Create/query Jira tickets from chat\n  - @datadog     # Check service health and metrics\n  - @figma       # Reference design components\n  - @internal-docs  # Your custom extension (built above)\n\nMCP Servers (Custom Tools):\n  - project-database    # Query your database\n  - deployment-manager  # Check/trigger deployments\n  - monitoring         # Service health & error rates\n  - context-provider   # Smart codebase search\n\nSkills (Behavior):\n  - .github/copilot-instructions.md    # Project standards\n  - skills/code-reviewer/SKILL.md      # Review guidelines\n  - skills/api-generator/SKILL.md      # API patterns\n\nGovernance:\n  - Content exclusion rules\n  - IP protection policies\n  - Audit trail logging\n  - Model selection strategy\n\n# Together, this gives every developer:\n# ✅ An AI that knows YOUR codebase and standards\n# ✅ Tools to access YOUR services and data\n# ✅ Extensions for YOUR external integrations\n# ✅ Governance that protects YOUR organization"
+        }
+      ]
+    },
+    {
+      "title": "🎓 Your Path as a GitHub Copilot Agentic Engineer",
+      "content": "<p>Completing this program means you have the full stack of skills needed to lead AI-native engineering at your organization. Here's how to apply what you've learned immediately:</p>\n<table class=\"data-table\">\n  <thead><tr><th>Skill Acquired</th><th>First Action This Week</th></tr></thead>\n  <tbody>\n    <tr><td>Agent Mode + AGENTS.md</td><td>Create AGENTS.md in your most active repo; assign one real issue to @copilot</td></tr>\n    <tr><td>Copilot Coding Agent</td><td>Pick a well-scoped bug (< 2 files affected) and let the agent fix it end-to-end</td></tr>\n    <tr><td>CCR + Agent Handoff</td><td>Enable CCR on one repo; practice the @copilot fix this handoff on a real PR</td></tr>\n    <tr><td>SKILL.md</td><td>Write a SKILL.md for your team's most common task (e.g., adding an API endpoint)</td></tr>\n    <tr><td>MCP Server</td><td>Build a local MCP server that queries your team's internal documentation</td></tr>\n    <tr><td>Enterprise Governance</td><td>Review your org's Copilot policy; propose a content exclusion rule for sensitive paths</td></tr>\n    <tr><td>Multi-Agent Pipelines</td><td>Map one repetitive workflow as a GitHub Actions agent pipeline (Issue → PR → Review)</td></tr>\n    <tr><td>Extensions</td><td>Install the @github extension and explore @datadog or @jira if your team uses them</td></tr>\n  </tbody>\n</table>\n<div class=\"concept-box info\">\n  <h4>💡 Agentic Engineer Competency Levels</h4>\n  <p><strong>Level 1 — Practitioner:</strong> Uses agent mode, assigns issues to Copilot, reviews CCR suggestions<br>\n  <strong>Level 2 — Builder:</strong> Creates AGENTS.md, writes SKILL.md, builds MCP servers, debugs failed agent runs<br>\n  <strong>Level 3 — Architect:</strong> Designs multi-agent pipelines, sets governance policy, measures ROI, leads team rollout<br>\n  <strong>Level 4 — Platform Engineer:</strong> Builds custom extensions, contributes to MCP ecosystem, drives org-wide adoption strategy</p>\n</div>\n<div class=\"concept-box tip\">\n  <h4>What Separates Great Agentic Engineers</h4>\n  <p>The best agentic engineers understand that AI amplifies both good and poor engineering practices. If your codebase has clear structure, good tests, and consistent patterns — the agent excels. If it has spaghetti code and no tests — the agent will produce more spaghetti. Investing in code quality and clear documentation is now an investment in AI effectiveness.<br><br>\n  The skills in this program are the foundation. The engineers who stand out will be the ones who continuously measure, iterate, and share what they learn with their teams.</p>\n</div>"
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the difference between a Copilot Extension and an MCP Server?",
+        "options": [
+          "They are the same thing with different names",
+          "Extensions are marketplace plugins adding @agents; MCP servers are custom tool servers you build",
+          "Extensions only work with Python, MCP with JavaScript",
+          "MCP servers are slower than extensions"
+        ],
+        "correct": 1,
+        "explanation": "Extensions are third-party marketplace plugins that add new @agents to Copilot Chat. MCP servers are custom tool servers you build and host to give agents access to specific tools and data."
+      },
+      {
+        "text": "In the complete AI Developer Platform stack, what role do Skills play?",
+        "options": [
+          "They provide third-party integrations",
+          "They define the behavior and standards the AI follows in your codebase",
+          "They manage deployment infrastructure",
+          "They handle user authentication"
+        ],
+        "correct": 1,
+        "explanation": "Skills (via SKILL.md and copilot-instructions.md) define HOW the AI behaves — your coding standards, patterns, and conventions. Extensions add capabilities, MCP adds tools, skills add knowledge."
+      },
+      {
+        "text": "Which combination creates the most comprehensive AI developer experience?",
+        "options": [
+          "Only Extensions",
+          "Only MCP Servers",
+          "Extensions + MCP Servers + Skills + Governance working together",
+          "Only Skills"
+        ],
+        "correct": 2,
+        "explanation": "The full platform combines Extensions (integrations), MCP Servers (custom tools), Skills (behavior), and Governance (safety) to create a comprehensive AI developer platform."
+      },
+      {
+        "text": "What technical requirement must a custom Copilot Extension server implement?",
+        "options": [
+          "A REST API with GET /chat",
+          "A streaming HTTP endpoint implementing the ChatCompletions API format, returning Server-Sent Events",
+          "A GraphQL endpoint at /graphql",
+          "A WebSocket server on port 8080"
+        ],
+        "correct": 1,
+        "explanation": "Copilot Extensions must implement the ChatCompletions streaming format. The extension receives messages, processes them, and streams back responses as Server-Sent Events (text/event-stream) — exactly as shown in the module's code example."
+      },
+      {
+        "text": "In the hands-on lab, after the Copilot Coding Agent opens a PR, CCR flags an issue. What is the complete sequence to fix it using only GitHub native features?",
+        "options": [
+          "Download the code, fix locally, push",
+          "Reply '@copilot fix this' in the CCR comment (Agent Handoff) → agent pushes fix commit → re-run CCR to verify",
+          "Close the PR and create a new issue",
+          "Manually edit the file in the GitHub web editor"
+        ],
+        "correct": 1,
+        "explanation": "The Agent Handoff Pattern keeps everything in GitHub: CCR identifies the issue inline, @copilot in the comment delegates the fix to the Coding Agent, the agent pushes a new commit, and CCR can re-verify. Zero context switching."
+      },
+      {
+        "text": "Your custom Copilot Extension is returning responses but the chat UI shows an error. What is the most likely cause?",
+        "options": [
+          "The extension is too slow",
+          "The extension is not verifying the GitHub token — GitHub's request is being rejected as unauthorized",
+          "The extension needs to be restarted",
+          "The GitHub App is not installed on the correct repository"
+        ],
+        "correct": 1,
+        "explanation": "Extensions must verify the X-GitHub-Token header on every request by calling the GitHub API user endpoint. If token verification fails and returns 401, Copilot Chat shows an error. Always validate the caller's identity before processing messages."
+      },
+      {
+        "text": "After rolling out agentic workflows for 30 days, leadership asks for ROI evidence. Which metric most directly demonstrates productivity impact?",
+        "options": [
+          "Number of developers who have Copilot installed",
+          "Copilot-authored PRs as a percentage of total PRs, with average cycle time comparison",
+          "GitHub Copilot subscription cost",
+          "Number of lines of code generated"
+        ],
+        "correct": 1,
+        "explanation": "ROI is demonstrated by business outcomes, not tool adoption. Copilot-authored PR percentage shows agent utilization; average cycle time (before vs. after) shows speed impact. Lines of code is a vanity metric — more code doesn't mean more value."
+      }
+    ]
+  }
+}

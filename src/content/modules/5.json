@@ -1,0 +1,126 @@
+{
+  "id": 5,
+  "workshop": 1,
+  "title": "Plan Agent: Architecture & Multi-File Changes",
+  "time": "55 min",
+  "objectives": [
+    "Use the Plan Agent to architect multi-file changes before coding",
+    "Understand how the agent decomposes complex tasks into steps",
+    "Review and modify agent-generated plans",
+    "Execute a planned refactoring across multiple files"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What is the Plan Agent?",
+      "content": "<p>The <strong>Plan Agent</strong> is a mode where Copilot first creates a detailed implementation plan before writing any code. This is crucial for complex, multi-file changes where jumping straight to code would lead to inconsistencies.</p>\n<p>Think of it as having an architect review your task and create blueprints before construction begins. You can review the plan, adjust it, and only then tell the agent to execute.</p>\n<div class=\"concept-box info\">\n  <h4>💡 When to Use the Plan Agent</h4>\n  <p>Use plan mode for: refactoring that spans 3+ files, adding new features that touch multiple layers (API, service, model, tests), database schema changes, and any task where the order of operations matters.</p>\n</div>"
+    },
+    {
+      "title": "💻 Plan Agent in Action",
+      "content": "<p>Let's use the Plan Agent to convert a callback-based Node.js service to async/await:</p>",
+      "codeBlocks": [
+        {
+          "lang": "prompt",
+          "title": "Prompt to Plan Agent",
+          "code": "#plan Refactor the user service from callbacks to async/await.\n\nFiles involved:\n- services/userService.js (main service with callbacks)\n- controllers/userController.js (calls the service)\n- middleware/errorHandler.js (needs to catch async errors)\n- tests/user.test.js (update test patterns)\n\nRequirements:\n- Convert all callback-based functions to async/await\n- Wrap controller methods with asyncHandler utility\n- Update error handling to use try/catch\n- Ensure all existing tests still pass\n- Do NOT change the API response format"
+        },
+        {
+          "lang": "markdown",
+          "title": "Agent's Generated Plan",
+          "code": "## Implementation Plan\n\n### Step 1: Create asyncHandler utility\n- File: utils/asyncHandler.js (NEW)\n- Wrap async route handlers to catch promise rejections\n- This must be created first as other files depend on it\n\n### Step 2: Refactor userService.js\n- Convert getUserById(id, callback) → async getUserById(id)\n- Convert createUser(data, callback) → async createUser(data)\n- Convert updateUser(id, data, callback) → async updateUser(id, data)\n- Replace callback error patterns with thrown errors\n\n### Step 3: Update userController.js\n- Import asyncHandler from utils\n- Wrap each route handler with asyncHandler()\n- Replace service callback usage with await\n- Add try/catch for specific error handling\n\n### Step 4: Update errorHandler middleware\n- Ensure it catches async errors (will be passed by asyncHandler)\n- No structural changes needed, verify compatibility\n\n### Step 5: Update tests\n- Convert test callbacks to async/await syntax\n- Update mock patterns for async service methods\n- Run full test suite to verify\n\nEstimated files changed: 4 modified, 1 new\nRisk level: Medium (changes touch core business logic)"
+        }
+      ],
+      "image": "m5_plan_agent.png"
+    },
+    {
+      "title": "✏️ Modifying & Rejecting Agent Plans",
+      "content": "<p>Generating a plan is only half the story. In practice, you will often need to modify the plan — change the order of steps, remove a step you want to handle manually, or redirect the agent when its approach is wrong. This is where the feedback loop matters most.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Three Types of Plan Feedback</h4>\n  <p><strong>Approve as-is:</strong> Reply \"Looks good, proceed with implementation\"<br>\n  <strong>Approve with changes:</strong> Reply with specific modifications before approving<br>\n  <strong>Reject and redirect:</strong> Reply explaining why the approach is wrong and what to do instead</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": "Scenario: Modifying a Plan Before Execution",
+          "code": "## Agent's Generated Plan (Step 2 is wrong)\n\n### Step 1: Create asyncHandler utility ✅\n### Step 2: Refactor userService.js AND orderService.js ❌ (too broad)\n### Step 3: Update controllers ✅\n### Step 4: Update error middleware ✅\n### Step 5: Update tests ✅\n\n---\n\n## Your Reply to the Agent:\n\n\"Before proceeding, I want to modify the plan:\n\n- Step 2: ONLY refactor userService.js in this PR.\n  orderService.js will be handled in a separate issue to\n  keep this PR reviewable. Remove orderService from scope.\n\n- Step 3: Also update userController.js only (not orderController).\n\n- Add a new Step 2b: Run the existing test suite after Step 2\n  to confirm nothing is broken before touching the controllers.\n\nUpdated plan looks good otherwise — proceed with implementation.\"\n\n---\n\n## Result:\nThe agent respects the scope change and proceeds with\nonly the files you specified. Step 2b is added to the\nexecution sequence."
+        },
+        {
+          "lang": "markdown",
+          "title": "Scenario: Rejecting a Plan and Redirecting",
+          "code": "## Agent's Plan (fundamentally wrong approach)\n\n### Step 1: Install new dependency 'bluebird' for Promise utilities\n### Step 2: Replace all native Promises with Bluebird Promises\n### Step 3: Convert callbacks using Bluebird.promisify()\n\n---\n\n## Your Rejection and Redirect:\n\n\"❌ Reject this plan.\n\nReason: We do not add new npm dependencies without\narchitectural review. Bluebird is unnecessary here.\nNode.js 18+ has full native async/await support.\n\nPlease generate a new plan that:\n1. Uses native async/await ONLY — no new libraries\n2. Uses util.promisify() (built-in Node.js) where\n   promisification is needed\n3. Follows the asyncHandler pattern already used in\n   middleware/errorHandler.js\n\nGenerate a revised plan.\"\n\n---\n\n## What happens next:\nAgent generates a completely new plan following your\nconstraints, using only native Node.js patterns.\nNo Bluebird, no new dependency."
+        }
+      ]
+    },
+    {
+      "title": "🛠️ Hands-On Example: asyncHandler Utility",
+      "content": "<p>Here's the utility the Plan Agent creates in Step 1. This is a common pattern in Express.js applications:</p>",
+      "codeBlocks": [
+        {
+          "lang": "javascript",
+          "title": "utils/asyncHandler.js",
+          "code": "/**\n * Wraps an async Express route handler to catch errors\n * and forward them to the error handling middleware.\n *\n * Usage: router.get('/users', asyncHandler(async (req, res) => { ... }))\n */\nconst asyncHandler = (fn) => (req, res, next) => {\n  Promise.resolve(fn(req, res, next)).catch(next);\n};\n\nmodule.exports = asyncHandler;"
+        },
+        {
+          "lang": "python",
+          "title": "Python Equivalent: Async Error Handling (FastAPI)",
+          "code": "from fastapi import FastAPI, HTTPException\nfrom functools import wraps\nimport logging\n\nlogger = logging.getLogger(__name__)\n\ndef handle_errors(func):\n    \"\"\"Decorator to catch and log async errors in route handlers.\"\"\"\n    @wraps(func)\n    async def wrapper(*args, **kwargs):\n        try:\n            return await func(*args, **kwargs)\n        except HTTPException:\n            raise  # Let FastAPI handle HTTP exceptions\n        except Exception as e:\n            logger.error(f\"Unhandled error in {func.__name__}: {e}\")\n            raise HTTPException(status_code=500, detail=\"Internal server error\")\n    return wrapper\n\napp = FastAPI()\n\n@app.get(\"/users/{user_id}\")\n@handle_errors\nasync def get_user(user_id: int):\n    user = await user_service.get_by_id(user_id)\n    if not user:\n        raise HTTPException(status_code=404, detail=\"User not found\")\n    return user"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the primary advantage of using the Plan Agent before coding?",
+        "options": [
+          "It makes the code run faster",
+          "It creates a reviewable plan for multi-file changes before execution",
+          "It automatically deploys the changes",
+          "It doesn't require any prompting"
+        ],
+        "correct": 1,
+        "explanation": "The Plan Agent creates a structured implementation plan that you can review and modify before any code is written, reducing errors in complex multi-file changes."
+      },
+      {
+        "text": "In the asyncHandler pattern, why do we wrap the async function?",
+        "options": [
+          "To make it run synchronously",
+          "To catch rejected promises and pass errors to Express error middleware",
+          "To improve performance",
+          "To enable TypeScript support"
+        ],
+        "correct": 1,
+        "explanation": "Express doesn't natively catch errors in async route handlers. asyncHandler catches rejected promises and forwards them to the error-handling middleware via next()."
+      },
+      {
+        "text": "What prefix triggers the Plan Agent mode in Copilot Chat?",
+        "options": [
+          "/plan",
+          "#plan",
+          "@plan",
+          "!plan"
+        ],
+        "correct": 1,
+        "explanation": "#plan at the start of your Copilot Chat message activates Plan Agent mode. The agent generates a step-by-step implementation plan that you review and approve before any code is written."
+      },
+      {
+        "text": "A Plan Agent output shows Step 1 creates utils/asyncHandler.js and Step 3 imports it. Why is this ordering critical?",
+        "options": [
+          "It isn't — steps can be executed in any order",
+          "Dependencies must be created before the files that import them; reversing would cause import errors",
+          "The agent always starts with utility files for performance reasons",
+          "Alphabetical order is required"
+        ],
+        "correct": 1,
+        "explanation": "In multi-file changes, execution order matters. Files that are imported by other files must be created first. The Plan Agent intelligently sequences steps to avoid broken imports or missing dependencies."
+      },
+      {
+        "text": "You're using the Plan Agent to extract a microservice from a monolith. What should your prompt include?",
+        "options": [
+          "Just the name of the microservice",
+          "#plan prefix, list of affected files, current dependencies, desired API contract, and constraints like 'maintain backward compatibility'",
+          "A one-line description of the desired outcome",
+          "The production database credentials"
+        ],
+        "correct": 1,
+        "explanation": "For complex architectural tasks, the Plan Agent needs: scope (#plan), affected files, dependency graph, API contracts, and explicit constraints. Richer context produces a more accurate, safer implementation plan."
+      }
+    ]
+  }
+}

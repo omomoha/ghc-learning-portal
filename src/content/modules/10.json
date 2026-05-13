@@ -1,0 +1,121 @@
+{
+  "id": 10,
+  "workshop": 2,
+  "title": "SKILL.md: Defining Reusable Agent Capabilities",
+  "time": "55 min",
+  "objectives": [
+    "Understand the SKILL.md specification and its components",
+    "Write SKILL.md files that define reusable agent capabilities",
+    "Use skills to create domain-specific agent behaviors",
+    "Share and version skills across teams"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What is SKILL.md?",
+      "content": "<p>A <strong>SKILL.md</strong> file is a structured document that defines a reusable capability for an AI agent. It tells the agent what it can do, how to do it, what tools it has access to, and what constraints it must follow.</p>\n<p>Think of SKILL.md as a job description for an agent. Just as a job description defines responsibilities, required skills, and reporting structure, SKILL.md defines the agent's purpose, available tools, and operating boundaries.</p>\n<div class=\"concept-box info\">\n  <h4>💡 SKILL.md Components</h4>\n  <p><strong>Frontmatter:</strong> Metadata (name, description, version, author)<br>\n  <strong>Instructions:</strong> Detailed behavior guidelines for the agent<br>\n  <strong>Tools:</strong> External capabilities the skill can use<br>\n  <strong>Examples:</strong> Input/output pairs showing expected behavior<br>\n  <strong>Constraints:</strong> Rules the agent must always follow</p>\n</div>"
+    },
+    {
+      "title": "💻 Writing Your First SKILL.md",
+      "content": "<p>Let's create a SKILL.md that defines a \"Code Review Expert\" skill for your team:</p>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": "skills/code-reviewer/SKILL.md",
+          "code": "---\nname: \"Code Review Expert\"\ndescription: \"Reviews code changes for security, performance, and adherence to team standards\"\nversion: \"1.0.0\"\nauthor: \"Acme Engineering\"\ntriggers:\n  - \"review this code\"\n  - \"check this PR\"\n  - \"find issues in this change\"\n---\n\n# Code Review Expert\n\nYou are a senior code reviewer. Your job is to review\ncode changes thoroughly and provide actionable feedback.\n\n## Review Checklist\n\nAlways check for:\n1. **Security**: SQL injection, XSS, auth bypass, secret exposure\n2. **Performance**: N+1 queries, unnecessary re-renders, memory leaks\n3. **Error Handling**: Unhandled promises, missing try/catch, generic errors\n4. **Testing**: Coverage gaps, missing edge cases, brittle tests\n5. **Standards**: Naming conventions, file organization, documentation\n\n## Response Format\n\nStructure your review as:\n- 🔴 **Critical** — Must fix before merge (security/correctness)\n- 🟡 **Suggestion** — Should fix, improves quality\n- 🟢 **Nitpick** — Optional improvement, minor style issue\n\n## Constraints\n- Never approve code with known security vulnerabilities\n- Always suggest tests for untested code paths\n- Be constructive — explain WHY something is an issue\n- Reference specific line numbers in your feedback"
+        }
+      ],
+      "image": "m10_skill_md.png"
+    },
+    {
+      "title": "🔎 Skill Discovery, Triggering & Composition",
+      "content": "<p>Writing a SKILL.md is only useful if the agent can find it and activate it at the right time. Skill discovery, triggering, and composition are the mechanics that make skills actually work in practice.</p>\n<div class=\"concept-box info\">\n  <h4>💡 How Skills Are Discovered</h4>\n  <p>Copilot scans these locations (in order) when a session starts:<br>\n  1. <strong><code>.github/skills/*/SKILL.md</code></strong> — all skills in the skills directory<br>\n  2. <strong><code>.github/copilot-instructions.md</code></strong> — always-on instructions (not a skill, but always loaded)<br>\n  3. <strong>AGENTS.md</strong> in the repo root — for the Coding Agent specifically<br><br>\n  Skills are loaded into context but only <em>activated</em> when triggered.</p>\n</div>\n<h4>Skill Triggering: Three Methods</h4>\n<table class=\"data-table\">\n  <thead><tr><th>Method</th><th>How It Works</th><th>Example</th></tr></thead>\n  <tbody>\n    <tr><td><strong>Keyword triggers</strong> (in frontmatter)</td><td>Agent matches user message against trigger phrases</td><td>User says \"review this code\" → Code Review Expert skill activates</td></tr>\n    <tr><td><strong>Explicit invocation</strong></td><td>User references skill by name in the prompt</td><td>\"Using the api-generator skill, create an endpoint for products\"</td></tr>\n    <tr><td><strong>Auto-load</strong> (via copilot-instructions.md)</td><td>Add <code>@skill code-reviewer</code> to instructions to always activate</td><td>Code Review skill active on every Copilot interaction in the repo</td></tr>\n  </tbody>\n</table>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": "Composing Multiple Skills in copilot-instructions.md",
+          "code": "# Acme Talent Platform — Copilot Configuration\n\n## Always-Active Skills\nThese skills are loaded for every Copilot interaction in this repo:\n\n@skill security-checker   # From .github/skills/security-checker/SKILL.md\n@skill api-standards      # From .github/skills/api-standards/SKILL.md\n\n## Conditional Skills (activate on keyword match)\nThe following skills are available and activate automatically\nwhen their trigger phrases are detected:\n\n- code-reviewer    → triggers on: \"review\", \"check this PR\", \"find issues\"\n- api-generator    → triggers on: \"create endpoint\", \"generate API\", \"new route\"\n- test-writer      → triggers on: \"write tests\", \"add test coverage\", \"test this\"\n\n## Skill Precedence\nIf two skills give conflicting instructions, security-checker\nalways takes priority over api-generator (security > convenience)."
+        },
+        {
+          "lang": "markdown",
+          "title": "How Skills and copilot-instructions.md Work Together",
+          "code": "## Layered Context Model (what Copilot sees in one session)\n\n┌─────────────────────────────────────────────┐\n│  Always present (every session):            │\n│  • .github/copilot-instructions.md          │\n│  • Any @skill references in instructions    │\n├─────────────────────────────────────────────┤\n│  Triggered skills (when phrase matched):    │\n│  • .github/skills/code-reviewer/SKILL.md   │\n│  • .github/skills/api-generator/SKILL.md   │\n├─────────────────────────────────────────────┤\n│  Coding Agent only (autonomous tasks):      │\n│  • AGENTS.md (permissions + constraints)    │\n└─────────────────────────────────────────────┘\n\nRule: Skills add DOMAIN EXPERTISE.\n      copilot-instructions.md adds PROJECT KNOWLEDGE.\n      AGENTS.md adds OPERATIONAL BOUNDARIES.\n      All three work together — they don't replace each other."
+        }
+      ]
+    },
+    {
+      "title": "🛠️ Advanced: Parameterized Skills",
+      "content": "<p>Skills can be parameterized to work across different contexts. Here's an example of an API endpoint generator skill:</p>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": "skills/api-generator/SKILL.md",
+          "code": "---\nname: \"REST API Endpoint Generator\"\ndescription: \"Generates complete API endpoints with validation, tests, and docs\"\nversion: \"2.0.0\"\nparameters:\n  - name: resource\n    description: \"The resource name (e.g., users, products)\"\n    required: true\n  - name: operations\n    description: \"CRUD operations to generate\"\n    default: [\"list\", \"get\", \"create\", \"update\", \"delete\"]\n  - name: auth\n    description: \"Authentication requirement\"\n    default: true\n---\n\n# API Endpoint Generator\n\nGenerate a complete REST API endpoint for the {{resource}} resource.\n\n## File Structure\nCreate these files:\n- routes/{{resource}}.js — Express router with endpoints\n- services/{{resource}}Service.js — Business logic\n- validators/{{resource}}.js — Zod validation schemas\n- tests/{{resource}}.test.js — Comprehensive test suite\n\n## For each operation in {{operations}}:\n1. Define the route with proper HTTP method\n2. Add input validation using Zod\n3. Implement service layer logic\n4. Include error handling\n5. Write tests covering happy path + error cases"
+        },
+        {
+          "lang": "python",
+          "title": "Python Example: FastAPI Endpoint (Generated by Skill)",
+          "code": "from fastapi import APIRouter, HTTPException, Depends\nfrom pydantic import BaseModel, EmailStr\nfrom typing import Optional\nfrom datetime import datetime\nfrom uuid import UUID, uuid4\n\nrouter = APIRouter(prefix=\"/api/users\", tags=[\"users\"])\n\n# --- Validation Schema (like Zod in Node.js) ---\nclass UserCreate(BaseModel):\n    name: str\n    email: EmailStr\n    role: str = \"engineer\"\n\n    class Config:\n        json_schema_extra = {\n            \"example\": {\n                \"name\": \"Ada Lovelace\",\n                \"email\": \"ada@acme.com\",\n                \"role\": \"engineer\"\n            }\n        }\n\nclass UserResponse(UserCreate):\n    id: UUID\n    created_at: datetime\n    updated_at: datetime\n\n# --- Route Handlers ---\n@router.post(\"/\", response_model=UserResponse, status_code=201)\nasync def create_user(user: UserCreate):\n    \"\"\"Create a new user with validation.\"\"\"\n    new_user = {\n        \"id\": uuid4(),\n        \"created_at\": datetime.utcnow(),\n        \"updated_at\": datetime.utcnow(),\n        **user.model_dump()\n    }\n    # In production: await db.users.insert(new_user)\n    return UserResponse(**new_user)\n\n@router.get(\"/{user_id}\", response_model=UserResponse)\nasync def get_user(user_id: UUID):\n    \"\"\"Retrieve a user by their UUID.\"\"\"\n    # In production: user = await db.users.find_one(id=user_id)\n    user = None  # Replace with DB query\n    if not user:\n        raise HTTPException(status_code=404, detail=\"User not found\")\n    return user"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the primary purpose of a SKILL.md file?",
+        "options": [
+          "To document the project's README",
+          "To define a reusable, structured capability for an AI agent",
+          "To configure CI/CD pipelines",
+          "To store environment variables"
+        ],
+        "correct": 1,
+        "explanation": "SKILL.md defines a reusable agent capability — including instructions, tools, examples, and constraints — that can be shared across teams and projects."
+      },
+      {
+        "text": "Which section of SKILL.md specifies rules the agent must always follow?",
+        "options": [
+          "Instructions",
+          "Tools",
+          "Constraints",
+          "Examples"
+        ],
+        "correct": 2,
+        "explanation": "The Constraints section defines rules the agent must always follow, such as never approving code with security vulnerabilities."
+      },
+      {
+        "text": "How do parameterized skills differ from static skills?",
+        "options": [
+          "They run faster",
+          "They accept input variables like {{resource}} to generate context-specific behavior",
+          "They can only be used in Python",
+          "They don't need a SKILL.md file"
+        ],
+        "correct": 1,
+        "explanation": "Parameterized skills use template variables (like {{resource}}) that are filled in at runtime, allowing one skill definition to generate context-specific behavior for different resources."
+      },
+      {
+        "text": "Your SKILL.md deploy skill references ${GITHUB_SHA}. Where is this variable provided at runtime?",
+        "options": [
+          "Hardcoded in the SKILL.md file",
+          "Injected as an environment variable by GitHub's runtime at the time of execution",
+          "The developer types it manually",
+          "It comes from .vscode/settings.json"
+        ],
+        "correct": 1,
+        "explanation": "${GITHUB_SHA} is a GitHub Actions environment variable injected at runtime. SKILL.md steps can reference runtime variables to create dynamic, context-aware deployment commands using the current commit SHA."
+      },
+      {
+        "text": "Your deploy-to-staging skill fails because STAGING_TOKEN is not set. Where should this secret be configured?",
+        "options": [
+          "Hardcoded in SKILL.md",
+          "In the SKILL.md frontmatter under 'secrets:'",
+          "In GitHub repository Settings → Secrets and variables → Actions",
+          "In .github/copilot-instructions.md"
+        ],
+        "correct": 2,
+        "explanation": "Secrets must NEVER be hardcoded in SKILL.md files (which are committed to the repo). They should be stored in GitHub repository Secrets and injected as environment variables at runtime."
+      }
+    ]
+  }
+}

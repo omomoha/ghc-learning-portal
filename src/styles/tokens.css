@@ -1,0 +1,103 @@
+/* ===== DESIGN TOKENS =====
+ * Ported from the original styles.css and modernized.
+ * Brand stays GHC green/teal; adds full dark-mode parity.
+ */
+
+:root {
+  /* Brand */
+  --brand: #1b4332;
+  --teal: #00b4a0;
+  --teal-light: #e6f7f5;
+  --teal-mid: #b2eae5;
+  --green: #235b4e;
+  --mint: #f0fdf4;
+
+  /* Surface */
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+
+  /* Text */
+  --text: #111827;
+  --text-muted: #4b5563;
+  --text-faint: #6b7280;
+
+  /* Borders */
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+
+  /* Status */
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
+
+  /* Code surfaces */
+  --code-bg: #161b22;
+  --code-fg: #e6edf3;
+
+  /* Layout */
+  --sidebar-w: 272px;
+  --nav-h: 56px;
+  --max-content-w: 880px;
+
+  /* Type */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* Geometry */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.12);
+
+  /* Motion */
+  --t-fast: 0.12s ease;
+  --t: 0.2s ease;
+  --t-slow: 0.35s ease;
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px rgba(0, 180, 160, 0.45);
+}
+
+/* Dark theme: respects OS preference, can be overridden by [data-theme="dark"] on <html>. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2128;
+    --text: #e6edf3;
+    --text-muted: #b1bac4;
+    --text-faint: #8b949e;
+    --border: #30363d;
+    --border-strong: #444c56;
+    --teal-light: #1f3a36;
+    --teal-mid: #2a544c;
+    --mint: #11261c;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1c2128;
+  --text: #e6edf3;
+  --text-muted: #b1bac4;
+  --text-faint: #8b949e;
+  --border: #30363d;
+  --border-strong: #444c56;
+  --teal-light: #1f3a36;
+  --teal-mid: #2a544c;
+  --mint: #11261c;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.6);
+}

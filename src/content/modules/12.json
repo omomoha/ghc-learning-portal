@@ -1,0 +1,105 @@
+{
+  "id": 12,
+  "workshop": 2,
+  "title": "GitHub MCP Server: Repository Intelligence",
+  "time": "45 min",
+  "objectives": [
+    "Set up and configure the official GitHub MCP Server",
+    "Use the GitHub MCP tools to query repositories, issues, and PRs",
+    "Build workflows that leverage GitHub data through MCP",
+    "Combine GitHub MCP with your custom MCP servers"
+  ],
+  "sections": [
+    {
+      "title": "🔍 The GitHub MCP Server",
+      "content": "<p>GitHub provides an official MCP server that gives AI agents direct access to your GitHub data. Instead of the agent scraping the web interface, it uses structured API calls to access repositories, issues, pull requests, code search, and more.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Available GitHub MCP Tools</h4>\n  <p><strong>Repository:</strong> List repos, search code, get file contents, list branches<br>\n  <strong>Issues:</strong> Create, list, update, comment on issues<br>\n  <strong>Pull Requests:</strong> List PRs, get diffs, review, merge<br>\n  <strong>Users:</strong> Get user profiles, list organization members<br>\n  <strong>Actions:</strong> List workflows, trigger runs, check status</p>\n</div>"
+    },
+    {
+      "title": "⚙️ Setting Up GitHub MCP Server",
+      "content": "",
+      "codeBlocks": [
+        {
+          "lang": "json",
+          "title": ".vscode/settings.json — GitHub MCP Configuration",
+          "code": "{\n  \"mcp\": {\n    \"servers\": {\n      \"github\": {\n        \"command\": \"npx\",\n        \"args\": [\"-y\", \"@modelcontextprotocol/server-github\"],\n        \"env\": {\n          \"GITHUB_PERSONAL_ACCESS_TOKEN\": \"ghp_your_token_here\"\n        }\n      }\n    }\n  }\n}"
+        }
+      ],
+      "image": "m12_github_mcp.png"
+    },
+    {
+      "title": "💻 Using GitHub MCP in Practice",
+      "content": "<p>With the GitHub MCP server connected, you can ask Copilot agent natural language questions about your repositories:</p>",
+      "codeBlocks": [
+        {
+          "lang": "prompt",
+          "title": "Example Agent Prompts Using GitHub MCP",
+          "code": "# These prompts work because the agent has GitHub MCP tools\n\n\"Show me all open issues labeled 'bug' in our backend repo\nthat were created in the last 7 days\"\n\n\"Find all Python files in the repo that import the\ndeprecated 'utils.old_helper' module\"\n\n\"List the last 5 merged PRs and summarize what changed\"\n\n\"Check if there are any failing GitHub Actions workflows\nand show me the error logs\"\n\n\"Create an issue in the frontend repo for adding dark mode\nsupport, with detailed requirements based on our design system\""
+        },
+        {
+          "lang": "python",
+          "title": "Script: Automated Sprint Report via GitHub MCP",
+          "code": "\"\"\"\nGenerate a sprint report by querying GitHub data.\nThis script demonstrates what the MCP server enables\nwhen connected to an AI agent.\n\"\"\"\nimport json\nfrom datetime import datetime, timedelta\n\ndef generate_sprint_report(github_mcp, repo, sprint_days=14):\n    \"\"\"Generate a sprint report from GitHub data.\"\"\"\n    since = (datetime.now() - timedelta(days=sprint_days)).isoformat()\n\n    # PRs merged this sprint\n    merged_prs = github_mcp.call_tool(\"list_pull_requests\", {\n        \"repo\": repo,\n        \"state\": \"closed\",\n        \"sort\": \"updated\",\n        \"since\": since\n    })\n\n    # Issues closed this sprint\n    closed_issues = github_mcp.call_tool(\"list_issues\", {\n        \"repo\": repo,\n        \"state\": \"closed\",\n        \"since\": since\n    })\n\n    # Remaining open issues\n    open_issues = github_mcp.call_tool(\"list_issues\", {\n        \"repo\": repo,\n        \"state\": \"open\",\n        \"labels\": \"sprint-current\"\n    })\n\n    report = {\n        \"sprint_end\": datetime.now().isoformat(),\n        \"prs_merged\": len(merged_prs),\n        \"issues_closed\": len(closed_issues),\n        \"issues_remaining\": len(open_issues),\n        \"velocity\": len(closed_issues) / sprint_days\n    }\n\n    return report"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What advantage does the GitHub MCP server have over web scraping?",
+        "options": [
+          "It's faster because it doesn't render HTML",
+          "It provides structured API access to GitHub data, which is reliable and efficient",
+          "It can bypass GitHub's rate limits",
+          "It works without authentication"
+        ],
+        "correct": 1,
+        "explanation": "The GitHub MCP server uses structured API calls rather than scraping HTML. This is more reliable, efficient, and gives access to data that isn't visible in the web UI."
+      },
+      {
+        "text": "What authentication does the GitHub MCP server require?",
+        "options": [
+          "OAuth only",
+          "A GitHub Personal Access Token (PAT)",
+          "SSH keys",
+          "No authentication needed"
+        ],
+        "correct": 1,
+        "explanation": "The GitHub MCP server requires a Personal Access Token (PAT) with appropriate permissions for the repositories you want to access."
+      },
+      {
+        "text": "Using the GitHub MCP server, you ask Copilot 'find all open bugs assigned to me'. What does the MCP server do?",
+        "options": [
+          "It scrapes the GitHub website for the results",
+          "It calls the GitHub Issues API with filters (state: open, label: bug, assignee: @me) and returns structured results",
+          "It searches commit messages",
+          "It reads the local repository's git log"
+        ],
+        "correct": 1,
+        "explanation": "The GitHub MCP server translates natural language requests into structured GitHub API calls. It doesn't scrape — it uses the REST/GraphQL API directly, giving reliable, structured data the agent can reason about."
+      },
+      {
+        "text": "You added a Jira MCP server to your mcp.json. What new capability does Copilot now have?",
+        "options": [
+          "It can deploy to Jira's cloud servers",
+          "It can read, create, and update Jira tickets directly from Copilot Chat without leaving the IDE",
+          "It can only read Jira ticket titles",
+          "Jira tickets are imported as GitHub Issues automatically"
+        ],
+        "correct": 1,
+        "explanation": "The Jira MCP server exposes Jira's API as MCP tools. Copilot can now search projects, read ticket details, create new tickets, and update status — all from within the IDE chat interface."
+      },
+      {
+        "text": "What security best practice must you follow when storing MCP server credentials?",
+        "options": [
+          "Hardcode tokens directly in mcp.json for convenience",
+          "Store all tokens in environment variables or secrets managers — never commit credentials to the repository",
+          "Use the same token for all MCP servers",
+          "Store credentials in .gitignore"
+        ],
+        "correct": 1,
+        "explanation": "mcp.json is committed to the repository and visible to all contributors. All sensitive credentials must use environment variable references (${VAR_NAME}) with the actual values stored in secrets managers or environment variables."
+      }
+    ]
+  }
+}

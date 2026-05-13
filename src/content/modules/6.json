@@ -1,0 +1,127 @@
+{
+  "id": 6,
+  "workshop": 1,
+  "title": "Copilot Code Review (CCR): Automated PR Reviews",
+  "time": "50 min",
+  "objectives": [
+    "Enable and configure Copilot Code Review on your repository",
+    "Understand the types of feedback CCR provides",
+    "Set up custom review instructions tailored to your codebase",
+    "Integrate CCR into your team's pull request workflow"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What is Copilot Code Review?",
+      "content": "<p><strong>Copilot Code Review (CCR)</strong> is GitHub's AI-powered pull request reviewer. When enabled, it automatically analyzes PRs for bugs, security issues, performance problems, and style violations — just like a human reviewer, but instant.</p>\n<p>CCR can be triggered automatically on every PR, or manually by requesting a review from <code>@copilot</code> on a specific PR. It leaves inline comments on specific lines of code, just like a human reviewer.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Key Benefits</h4>\n  <p>CCR catches issues before human reviewers spend time on them: null pointer risks, SQL injection vectors, unhandled promise rejections, missing input validation, and inconsistent error handling patterns. This lets human reviewers focus on architecture and business logic.</p>\n</div>"
+    },
+    {
+      "title": "⚙️ Setting Up CCR",
+      "content": "<div class=\"steps\">\n  <div class=\"step\">\n    <div class=\"step-num\">1</div>\n    <div class=\"step-content\">\n      <h4>Enable in Repository Settings</h4>\n      <p>Go to your repository → Settings → Code Security and Analysis → Enable Copilot Code Review. Choose \"Automatic\" to review every PR or \"Manual\" for on-demand reviews.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">2</div>\n    <div class=\"step-content\">\n      <h4>Create Custom Review Instructions</h4>\n      <p>Add a <code>.github/copilot-review-instructions.md</code> file to teach CCR your team's specific patterns and standards.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">3</div>\n    <div class=\"step-content\">\n      <h4>Configure Review Scope</h4>\n      <p>Use a <code>.github/copilot-review-config.yml</code> to specify which files to include/exclude and which review categories to prioritize.</p>\n    </div>\n  </div>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": ".github/copilot-review-instructions.md",
+          "code": "# Code Review Instructions for Copilot\n\n## Security\n- Flag any SQL queries not using parameterized statements\n- Check for hardcoded secrets or API keys\n- Verify all user input is sanitized before use\n\n## Error Handling\n- All async functions must use try/catch\n- API endpoints must return appropriate HTTP status codes\n- Never expose stack traces in production responses\n\n## Style\n- Functions must not exceed 30 lines\n- Use early returns to reduce nesting\n- All public functions require JSDoc comments"
+        }
+      ],
+      "image": "m6_code_review.png"
+    },
+    {
+      "title": "🔬 Deterministic Detections: LLM + CodeQL + ESLint",
+      "content": "<p>CCR's most powerful feature is <strong>Deterministic Detection</strong> — blending LLM reasoning with static analysis tools (CodeQL and ESLint) to produce findings with <em>zero false positives</em>. Unlike pure LLM review which may hallucinate, deterministic detections are backed by proven static analysis engines.</p>\n<table class=\"content-table\">\n  <thead><tr><th>Detection Layer</th><th>Tool</th><th>Example Finding</th></tr></thead>\n  <tbody>\n    <tr><td>Security Vulnerabilities</td><td>CodeQL</td><td>SQL injection, path traversal, XSS vectors</td></tr>\n    <tr><td>Code Style Violations</td><td>ESLint</td><td>Unused variables, missing semicolons, complexity</td></tr>\n    <tr><td>Logic &amp; Context</td><td>LLM</td><td>\"This function ignores the DB error on line 12\"</td></tr>\n    <tr><td>Custom Rules</td><td>Your config</td><td>Team patterns from copilot-review-instructions.md</td></tr>\n  </tbody>\n</table>\n<div class=\"concept-box info\">\n  <h4>💡 The Agent Handoff Pattern in PRs</h4>\n  <p>When CCR leaves a comment, you can respond with <code>@copilot fix this</code> in the PR thread. The Coding Agent reads the comment, understands the finding, and pushes a new commit to fix it — without you leaving GitHub. CCR identifies the issue, you authorize, the Coding Agent applies the fix.</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": "PR Comment — Triggering the Handoff Pattern",
+          "code": "<!-- CCR leaves this comment on line 14 of routes/users.js -->\nWarning: SQL Injection Risk (CodeQL CWE-89)\nThe query concatenates user input directly.\nAn attacker could execute: name='; DROP TABLE users; --\n\nSuggested fix:\n  const users = await db.query(\n    'SELECT * FROM users WHERE name = $1',\n    [req.query.name]\n  );\n\n<!-- Developer replies: -->\n@copilot fix this\n\n<!-- Coding Agent pushes commit: -->\n<!-- fix: use parameterized query to prevent SQL injection (CWE-89) -->"
+        },
+        {
+          "lang": "yaml",
+          "title": ".github/copilot-review-config.yml — Automatic Rulesets",
+          "code": "review:\n  automatic: true\n  branches:\n    - \"main\"\n    - \"release/**\"\n  required_passing: true\n  severity_threshold: \"high\"\n\ncontext_files:\n  - \"docs/architecture.md\"\n  - \"docs/security-standards.md\"\n\nexclude_patterns:\n  - \"*.generated.ts\"\n  - \"vendor/**\"\n  - \"dist/**\""
+        }
+      ]
+    },
+    {
+      "title": "💻 Example: What CCR Catches",
+      "content": "<p>Here's an example of code that CCR would flag, and its suggested fix:</p>",
+      "codeBlocks": [
+        {
+          "lang": "javascript",
+          "title": "Code with issues (CCR flags these)",
+          "code": "// ❌ CCR flags: SQL injection vulnerability\napp.get('/users', async (req, res) => {\n  const name = req.query.name;\n  const users = await db.query(\n    `SELECT * FROM users WHERE name = '${name}'`\n  );\n  // ❌ CCR flags: Unhandled case when users is empty\n  res.json(users.rows);\n});\n\n// ✅ CCR suggested fix:\napp.get('/users', async (req, res) => {\n  const name = req.query.name;\n  const users = await db.query(\n    'SELECT * FROM users WHERE name = $1',\n    [name]  // Parameterized query prevents SQL injection\n  );\n  res.json(users.rows || []);  // Handle empty results\n});"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "How is Copilot Code Review triggered on a pull request?",
+        "options": [
+          "It only works when you push to the main branch",
+          "Automatically on every PR (if configured) or by requesting @copilot as reviewer",
+          "By running a CLI command locally",
+          "By adding a 'review' label to the PR"
+        ],
+        "correct": 1,
+        "explanation": "CCR can be set to automatic (reviews every PR) or manual (you request @copilot as a reviewer on specific PRs)."
+      },
+      {
+        "text": "Where do you customize CCR's review criteria for your team?",
+        "options": [
+          "VS Code settings",
+          ".github/copilot-review-instructions.md",
+          "GitHub organization admin panel",
+          "Copilot mobile app"
+        ],
+        "correct": 1,
+        "explanation": "Custom review instructions go in .github/copilot-review-instructions.md. CCR reads this file to understand your team's specific coding standards and patterns."
+      },
+      {
+        "text": "What is 'Deterministic Detection' in Copilot Code Review?",
+        "options": [
+          "CCR that only runs on deterministic (non-async) functions",
+          "Blending LLM reasoning with CodeQL and ESLint to produce zero-false-positive security findings",
+          "A review mode that always gives the same suggestions",
+          "A feature that detects duplicate code"
+        ],
+        "correct": 1,
+        "explanation": "Deterministic Detection combines LLM contextual understanding with CodeQL static analysis and ESLint rules. Because it's backed by proven engines, these findings have zero false positives — unlike pure LLM review."
+      },
+      {
+        "text": "A CCR comment flags a SQL injection on line 22. You reply '@copilot fix this' in the PR. What happens next?",
+        "options": [
+          "CCR re-runs and marks the issue as resolved",
+          "The Copilot Coding Agent pushes a new commit fixing the injection vulnerability",
+          "An email is sent to the repository admin",
+          "Nothing — @copilot only works in issue comments"
+        ],
+        "correct": 1,
+        "explanation": "This is the Agent Handoff Pattern. @copilot in a PR comment delegates the fix to the Copilot Coding Agent, which reads the finding, implements the fix, and pushes a new commit without leaving GitHub."
+      },
+      {
+        "text": "You want CCR to block merging to 'main' if it finds any HIGH severity issue. Where is this configured?",
+        "options": [
+          ".github/copilot-review-instructions.md",
+          ".github/copilot-review-config.yml with required_passing: true and severity_threshold: high",
+          "Repository Settings → Branches → merge restrictions",
+          "The AGENTS.md file"
+        ],
+        "correct": 1,
+        "explanation": "Automatic Code Review rulesets are configured in .github/copilot-review-config.yml. Setting required_passing: true and severity_threshold: 'high' blocks merges when CCR finds high or critical issues."
+      },
+      {
+        "text": "You want CCR to understand your team's security standards doc when reviewing. What do you add to the review request?",
+        "options": [
+          "Upload the doc to GitHub Pages",
+          "Reference the file using # in the PR comment: '#file:docs/security-standards.md please review with this context'",
+          "Paste the entire doc into the PR description",
+          "Add the doc path to .gitignore"
+        ],
+        "correct": 1,
+        "explanation": "Using the # symbol in Copilot comments attaches specific files as context. The reviewer uses the current file content when analyzing the PR, giving you context-aware security reviews."
+      }
+    ]
+  }
+}

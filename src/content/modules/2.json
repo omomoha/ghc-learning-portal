@@ -1,0 +1,137 @@
+{
+  "id": 2,
+  "workshop": 1,
+  "title": "Agent Modes: Local, Background & Cloud Execution",
+  "time": "50 min",
+  "objectives": [
+    "Distinguish between local, background, and cloud agent execution modes",
+    "Configure and trigger each mode for different use cases",
+    "Understand when to choose each mode for optimal developer workflow",
+    "Run a background agent task using GitHub's cloud infrastructure"
+  ],
+  "sections": [
+    {
+      "title": "🔍 Understanding the Three Execution Modes",
+      "content": "<p>GitHub Copilot agents can operate in three distinct execution environments. Understanding when to use each is critical for efficient development workflows.</p>\n<table>\n<thead>\n<tr><th>Mode</th><th>Where It Runs</th><th>Best For</th><th>Latency</th></tr>\n</thead>\n<tbody>\n<tr><td><strong>Local (Foreground)</strong></td><td>Your VS Code instance</td><td>Interactive development, debugging</td><td>Immediate</td></tr>\n<tr><td><strong>Background</strong></td><td>Your machine, background process</td><td>Long-running tasks while you code</td><td>Minutes</td></tr>\n<tr><td><strong>Cloud (Coding Agent)</strong></td><td>GitHub-hosted environment</td><td>Multi-file refactors, CI-adjacent tasks</td><td>Minutes–hours</td></tr>\n</tbody>\n</table>"
+    },
+    {
+      "title": "🏠 Local Agent Mode — Deep Dive",
+      "content": "<p>The local agent runs directly inside your VS Code session. It has full access to your workspace, terminal, installed tools, and local environment. This is the default and most interactive mode.</p>\n<div class=\"concept-box info\">\n  <h4>💡 When to Use Local Mode</h4>\n  <p>Use local mode for real-time pair programming, debugging sessions, learning new APIs, generating and running tests iteratively, and any task where you want to observe and intervene in real time.</p>\n</div>\n<p><strong>Example: Local Agent Building an Express API.</strong> In your Copilot Chat (Agent mode), try this prompt:</p>",
+      "codeBlocks": [
+        {
+          "lang": "prompt",
+          "title": "Local Agent: Express API",
+          "code": "Create a RESTful Express.js API with the following endpoints:\n- GET /api/users — returns a list of users\n- POST /api/users — creates a new user\n- GET /api/users/:id — returns a single user\n\nUse an in-memory array for storage. Include input validation\nwith express-validator. Add error handling middleware.\nRun the server and test each endpoint with curl."
+        }
+      ],
+      "image": "m2_agent_modes.png"
+    },
+    {
+      "title": "🔄 Background Agent Mode — Deep Dive",
+      "content": "<p>Background agent mode lets Copilot run a long-running task in a background process while you keep coding in the foreground. The agent works autonomously, and you can check its progress or interrupt at any time — it doesn't block your editor.</p>\n<div class=\"concept-box info\">\n  <h4>💡 When to Use Background Mode</h4>\n  <p>Use background mode for tasks that take minutes to complete but don't need your constant supervision: running a full test suite, generating comprehensive docs for a module, doing a large batch rename, or analysing code quality across many files. You stay productive while the agent works.</p>\n</div>\n<h4>How to Trigger a Background Task in VS Code</h4>\n<div class=\"steps\">\n  <div class=\"step\">\n    <div class=\"step-num\">1</div>\n    <div class=\"step-content\">\n      <h4>Start a task in Agent mode</h4>\n      <p>Open Copilot Chat in Agent mode (Ctrl+Shift+I → switch to Agent). Type your task prompt. Before pressing Enter, click the ▾ dropdown next to the send button and select <strong>“Run in Background”</strong>.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">2</div>\n    <div class=\"step-content\">\n      <h4>Monitor via the Background Tasks panel</h4>\n      <p>A background task indicator appears in the VS Code status bar. Click it to open the Background Tasks panel and watch progress logs in real time without losing your current editor context.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">3</div>\n    <div class=\"step-content\">\n      <h4>Review or interrupt</h4>\n      <p>You can interrupt a background task at any point. When it completes, VS Code shows a notification with a summary of what changed. Review and accept or reject the edits.</p>\n    </div>\n  </div>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "prompt",
+          "title": "Background task: test coverage gaps",
+          "code": "[Run in Background]\nAnalyse the entire /api directory for test coverage gaps.\nFor every exported function that has no corresponding test,\ncreate a list in a new file: reports/test-coverage-gaps.md\n\nFormat each entry as:\n- File: <path>\n- Function: <name>\n- Suggested test: <one-line description of what to test>\n\nDo NOT write tests yet — just produce the report.\nI will review and run the actual test-writing in a second pass."
+        }
+      ]
+    },
+    {
+      "title": "☁️ Cloud Agent (Coding Agent) — Deep Dive",
+      "content": "<p>The Cloud Coding Agent runs in a GitHub-hosted environment. You assign it a GitHub Issue, and it creates a pull request with the implementation autonomously.</p>\n<h4>How to Trigger the Cloud Coding Agent</h4>\n<div class=\"steps\">\n  <div class=\"step\">\n    <div class=\"step-num\">1</div>\n    <div class=\"step-content\">\n      <h4>Create a well-defined GitHub Issue</h4>\n      <p>Write a clear, specific issue. The more detail you provide (acceptance criteria, edge cases, file paths), the better the result.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">2</div>\n    <div class=\"step-content\">\n      <h4>Assign Copilot to the Issue</h4>\n      <p>In the issue sidebar, assign <code>@copilot</code> as the assignee. The coding agent begins work in a cloud sandbox.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">3</div>\n    <div class=\"step-content\">\n      <h4>Review the Pull Request</h4>\n      <p>When the agent finishes, it opens a PR linked to the issue. Review the code, request changes if needed, and the agent will iterate.</p>\n    </div>\n  </div>\n</div>\n<div class=\"concept-box warning\">\n  <h4>⚠ Limitations of the Cloud Agent</h4>\n  <p>The cloud agent works in a sandboxed container. It cannot access private npm registries, VPNs, or databases that require network access outside of the sandbox. Always check if your task depends on external services before assigning to the cloud agent.</p>\n</div>"
+    },
+    {
+      "title": "📊 Comparison in Practice",
+      "content": "<p>Here is a practical comparison showing how the same task would be handled differently in each mode:</p>",
+      "codeBlocks": [
+        {
+          "lang": "bash",
+          "title": "Local vs. Cloud — same task, different modes",
+          "code": "# === LOCAL MODE ===\n# You open agent mode in VS Code and say:\n#   \"Add request body validation to the POST /users endpoint\n#    using Pydantic. Show me the validation errors.\"\n# Agent edits the file, runs the server, tests it — you watch live.\n\n# === CLOUD MODE (via GitHub Issue) ===\n# Issue title: \"Add Pydantic validation to POST /users\"\n# Issue body:\n#   - Validate: name (str, 2-50 chars), email (valid format),\n#     age (int, 18-120)\n#   - Return 422 with detailed error messages for invalid input\n#   - Add unit tests for all validation cases\n#   - Update API documentation in docs/api.md\n# Assign: @copilot → PR appears in ~10 minutes"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "Which agent mode runs in a GitHub-hosted sandbox environment?",
+        "options": [
+          "Local (Foreground) mode",
+          "Background mode",
+          "Cloud (Coding Agent) mode",
+          "Hybrid mode"
+        ],
+        "correct": 2,
+        "explanation": "The Cloud Coding Agent runs in GitHub's hosted environment. You assign it issues and it creates pull requests autonomously."
+      },
+      {
+        "text": "How do you trigger the Cloud Coding Agent for a task?",
+        "options": [
+          "Use a special VS Code command palette action",
+          "Assign @copilot to a GitHub Issue",
+          "Push code to a branch named 'copilot-agent'",
+          "Send an email to copilot@github.com"
+        ],
+        "correct": 1,
+        "explanation": "You assign @copilot as the assignee on a GitHub Issue. The coding agent picks it up and opens a PR when it's done."
+      },
+      {
+        "text": "What is a key limitation of the Cloud Coding Agent?",
+        "options": [
+          "It can only work with JavaScript projects",
+          "It cannot create new files",
+          "It cannot access private registries or VPN-only resources",
+          "It only works on weekdays"
+        ],
+        "correct": 2,
+        "explanation": "The cloud agent works in a sandboxed container and cannot access private npm registries, VPNs, or databases that require special network access."
+      },
+      {
+        "text": "What is the key advantage of running an agent task in background mode versus foreground mode?",
+        "options": [
+          "Background mode is faster because it uses more CPU",
+          "Background mode lets you keep coding while the agent works — it doesn't block your editor",
+          "Background mode has access to the internet; foreground does not",
+          "Background mode automatically deploys the result"
+        ],
+        "correct": 1,
+        "explanation": "Background mode decouples the agent's execution from your editor session. You can continue writing code, reviewing PRs, or doing other work while the agent processes a long-running task in the background."
+      },
+      {
+        "text": "You ask Copilot (background mode) to analyse 200 files for test coverage gaps and produce a report. It completes after 8 minutes. What should you do next?",
+        "options": [
+          "Nothing — background tasks auto-merge their changes",
+          "Restart VS Code to apply the changes",
+          "Review the background task output in the Background Tasks panel and accept or reject the changes",
+          "The task only runs locally, so no output is produced"
+        ],
+        "correct": 2,
+        "explanation": "Background tasks don't auto-apply. When they complete, VS Code notifies you and shows the proposed changes. You review the output in the Background Tasks panel and explicitly accept, modify, or reject what the agent produced."
+      },
+      {
+        "text": "What is the exact GitHub CLI command to assign Issue #42 to the Copilot Coding Agent?",
+        "options": [
+          "gh issue assign 42 --to copilot",
+          "gh issue edit 42 --add-assignee @copilot",
+          "gh copilot assign 42",
+          "gh issue copilot-assign 42"
+        ],
+        "correct": 1,
+        "explanation": "The correct command is 'gh issue edit 42 --add-assignee @copilot'. This sets @copilot as the assignee, which triggers the Cloud Coding Agent to begin working on the issue."
+      },
+      {
+        "text": "What file in a repository governs an agent's permissions, constraints, and tech stack knowledge?",
+        "options": [
+          ".github/copilot-instructions.md",
+          "AGENTS.md",
+          ".vscode/settings.json",
+          "CONTRIBUTING.md"
+        ],
+        "correct": 1,
+        "explanation": "AGENTS.md is the agent instruction manifest. It defines what the agent can do (Permissions), what it must not do (Constraints), the Tech Stack it works with, and Code Style requirements — ensuring consistent, safe agent behavior."
+      }
+    ]
+  }
+}

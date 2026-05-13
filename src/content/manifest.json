@@ -1,0 +1,130 @@
+[
+  {
+    "id": 1,
+    "workshop": 1,
+    "title": "Configuring GitHub Copilot for Agentic Workflows",
+    "time": "45 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 2,
+    "workshop": 1,
+    "title": "Agent Modes: Local, Background & Cloud Execution",
+    "time": "50 min",
+    "questionCount": 7,
+    "needsRestoration": false
+  },
+  {
+    "id": 3,
+    "workshop": 1,
+    "title": "Coding Agent: From Issue to Pull Request",
+    "time": "55 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 4,
+    "workshop": 1,
+    "title": "Crafting Effective Agent Prompts & Issue Templates",
+    "time": "45 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 5,
+    "workshop": 1,
+    "title": "Plan Agent: Architecture & Multi-File Changes",
+    "time": "55 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 6,
+    "workshop": 1,
+    "title": "Copilot Code Review (CCR): Automated PR Reviews",
+    "time": "50 min",
+    "questionCount": 6,
+    "needsRestoration": false
+  },
+  {
+    "id": 7,
+    "workshop": 1,
+    "title": "Agent-Assisted PR Summaries & Documentation",
+    "time": "40 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 8,
+    "workshop": 1,
+    "title": "Agent Handoff & Multi-Agent Collaboration",
+    "time": "50 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 9,
+    "workshop": 2,
+    "title": "Copilot Skills Framework & Custom Instructions",
+    "time": "50 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 10,
+    "workshop": 2,
+    "title": "SKILL.md: Defining Reusable Agent Capabilities",
+    "time": "55 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 11,
+    "workshop": 2,
+    "title": "Model Context Protocol (MCP): Building AI Tool Servers",
+    "time": "60 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 12,
+    "workshop": 2,
+    "title": "GitHub MCP Server: Repository Intelligence",
+    "time": "45 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 13,
+    "workshop": 2,
+    "title": "Tool Calling: Building AI-Powered Integrations",
+    "time": "55 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 14,
+    "workshop": 2,
+    "title": "Enterprise Model Strategy & AI Governance",
+    "time": "55 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 15,
+    "workshop": 2,
+    "title": "Memory, Context Management & Optimization",
+    "time": "50 min",
+    "questionCount": 5,
+    "needsRestoration": false
+  },
+  {
+    "id": 16,
+    "workshop": 2,
+    "title": "Copilot Extensions & Ecosystem Integration",
+    "time": "60 min",
+    "questionCount": 7,
+    "needsRestoration": false
+  }
+]

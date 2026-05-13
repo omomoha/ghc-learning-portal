@@ -1,0 +1,108 @@
+{
+  "id": 1,
+  "workshop": 1,
+  "title": "Configuring GitHub Copilot for Agentic Workflows",
+  "time": "45 min",
+  "objectives": [
+    "Understand what agentic AI means in the context of software development",
+    "Enable and configure GitHub Copilot's agent mode in VS Code",
+    "Set up workspace-level Copilot settings for optimal agentic behavior",
+    "Verify your configuration with a live agentic task"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What Are Agentic Workflows?",
+      "content": "<p>Traditional AI code assistants respond to a single prompt with a single suggestion. <strong>Agentic workflows</strong> go much further — the AI operates as an autonomous agent that can plan multi-step tasks, execute commands, read and write files, and iterate on its own output until the task is complete.</p>\n<p>Think of it this way: a regular assistant answers questions, but an agent <em>completes tasks</em>. GitHub Copilot's agent mode transforms it from a code suggestion tool into a full development partner.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Key Concepts</h4>\n  <p><strong>Agent Mode:</strong> Copilot autonomously plans, executes, and iterates on tasks. It can run terminal commands, edit multiple files, and fix its own errors.<br>\n  <strong>Chat Mode:</strong> Standard Q&amp;A — Copilot responds to prompts but doesn't take action.<br>\n  <strong>Edit Mode:</strong> Copilot makes inline code changes you specify, but doesn't run or test them.</p>\n</div>"
+    },
+    {
+      "title": "🛠️ Step-by-Step: Enable Agent Mode in VS Code",
+      "content": "<div class=\"steps\">\n  <div class=\"step\">\n    <div class=\"step-num\">1</div>\n    <div class=\"step-content\">\n      <h4>Install Prerequisites</h4>\n      <p>Ensure you have VS Code 1.99+ and the GitHub Copilot extension (v1.250+). Open VS Code, go to Extensions (Ctrl+Shift+X), and search for \"GitHub Copilot\". Install or update to the latest version.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">2</div>\n    <div class=\"step-content\">\n      <h4>Enable Agent Mode in Settings</h4>\n      <p>Open Settings (Ctrl+,), search for <code>chat.agent.enabled</code>, and ensure it is checked. This activates the agent mode toggle in the Copilot Chat panel.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">3</div>\n    <div class=\"step-content\">\n      <h4>Open Copilot Chat &amp; Switch to Agent</h4>\n      <p>Open Copilot Chat (Ctrl+Shift+I). At the bottom of the chat input, you'll see a mode dropdown. Switch it from \"Chat\" to <strong>\"Agent\"</strong>.</p>\n    </div>\n  </div>\n  <div class=\"step\">\n    <div class=\"step-num\">4</div>\n    <div class=\"step-content\">\n      <h4>Configure Workspace Settings</h4>\n      <p>Create a <code>.vscode/settings.json</code> in your project root for workspace-specific Copilot settings. This ensures all team members share the same configuration.</p>\n    </div>\n  </div>\n</div>"
+    },
+    {
+      "title": "💻 Configuration Example",
+      "content": "<p>Here is a typical VS Code workspace configuration that optimizes Copilot for agentic development:</p>",
+      "codeBlocks": [
+        {
+          "lang": "json",
+          "title": ".vscode/settings.json",
+          "code": "{\n  \"chat.agent.enabled\": true,\n  \"github.copilot.chat.agent.runTasks\": true,\n  \"github.copilot.chat.agent.autoFix\": true,\n  \"github.copilot.chat.codeGeneration.instructions\": [\n    { \"text\": \"Use TypeScript with strict mode enabled\" },\n    { \"text\": \"Follow ESLint and Prettier formatting rules\" },\n    { \"text\": \"Include JSDoc comments for public functions\" }\n  ],\n  \"github.copilot.chat.testGeneration.instructions\": [\n    { \"text\": \"Use Jest with describe/it blocks\" },\n    { \"text\": \"Include edge cases and error scenarios\" }\n  ]\n}"
+        }
+      ],
+      "image": "m1_agent_config.png"
+    },
+    {
+      "title": "🧪 Try It Yourself: First Agentic Task",
+      "content": "<p>Let's verify your configuration with a simple agentic task. Open the Copilot Chat in agent mode and type the following prompt:</p>",
+      "codeBlocks": [
+        {
+          "lang": "prompt",
+          "title": "Agentic Task: hello-agent",
+          "code": "Create a new file called hello-agent.js that exports a function\ngreetUser(name) which returns a personalized greeting. Then create\na test file hello-agent.test.js with at least 3 test cases using\nJest. Run the tests and fix any failures."
+        }
+      ]
+    },
+    {
+      "title": "✅ What to Look For",
+      "content": "<p>Watch how the agent plans the task, creates both files, installs Jest if needed, runs the tests, and fixes any issues — all autonomously.</p>\n<div class=\"concept-box tip\">\n  <h4>✅ A successful agentic flow shows:</h4>\n  <ul>\n    <li>The agent's plan in the chat</li>\n    <li>File creation in your explorer</li>\n    <li>Terminal commands executing</li>\n    <li>Automatic error correction if tests fail</li>\n  </ul>\n</div>"
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the primary difference between Copilot's Agent mode and Chat mode?",
+        "options": [
+          "Agent mode is faster at generating code",
+          "Agent mode can autonomously plan, execute commands, and iterate on tasks",
+          "Chat mode cannot understand natural language",
+          "Agent mode only works with Python projects"
+        ],
+        "correct": 1,
+        "explanation": "Agent mode goes beyond answering questions — it autonomously plans multi-step tasks, runs terminal commands, edits files, and iterates until the task is complete."
+      },
+      {
+        "text": "Which VS Code setting enables Copilot's agent mode?",
+        "options": [
+          "copilot.agent.activate",
+          "github.copilot.agentMode",
+          "chat.agent.enabled",
+          "copilot.mode.agent"
+        ],
+        "correct": 2,
+        "explanation": "The setting 'chat.agent.enabled' in VS Code settings activates the agent mode toggle in the Copilot Chat panel."
+      },
+      {
+        "text": "Where should workspace-level Copilot instructions be configured?",
+        "options": [
+          "In your .bashrc file",
+          "In the GitHub repository settings page",
+          "In .vscode/settings.json at the project root",
+          "In the Copilot extension global settings only"
+        ],
+        "correct": 2,
+        "explanation": "Workspace-level configurations go in .vscode/settings.json, which allows project-specific settings that can be shared across the team."
+      },
+      {
+        "text": "You want the Copilot agent to automatically use TypeScript strict mode for all generated code. Which setting achieves this?",
+        "options": [
+          "Set typescript.strict in tsconfig.json only",
+          "Add { \"text\": \"Use TypeScript with strict mode enabled\" } to github.copilot.chat.codeGeneration.instructions in .vscode/settings.json",
+          "Install the TypeScript Copilot extension",
+          "Enable strict mode in the Copilot organization settings"
+        ],
+        "correct": 1,
+        "explanation": "The codeGeneration.instructions array in .vscode/settings.json passes persistent instructions to the agent for every code generation request. This is how you enforce project-wide coding standards."
+      },
+      {
+        "text": "An agent creates a file, runs tests, sees failures, and fixes them without you re-prompting. Which setting enables this self-correction loop?",
+        "options": [
+          "chat.agent.enabled",
+          "github.copilot.chat.agent.autoFix",
+          "github.copilot.chat.agent.runTasks",
+          "chat.agent.selfCorrect"
+        ],
+        "correct": 1,
+        "explanation": "github.copilot.chat.agent.autoFix enables the agent to detect errors in its output (like failing tests) and automatically attempt to fix them, completing the iterative self-correction loop."
+      }
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "id": 15,
+  "workshop": 2,
+  "title": "Memory, Context Management & Optimization",
+  "time": "50 min",
+  "objectives": [
+    "Understand how AI agents manage context windows",
+    "Implement context optimization strategies for large codebases",
+    "Use .github/copilot-instructions.md effectively for persistent context",
+    "Design custom context providers for domain-specific knowledge"
+  ],
+  "sections": [
+    {
+      "title": "🔍 The Context Window Challenge",
+      "content": "<p>AI models have a <strong>context window</strong> — a maximum amount of text they can \"see\" at once. For most models, this is 128K-200K tokens. In a large codebase with thousands of files, the AI can't see everything at once. Effective context management ensures the agent sees the <em>right</em> information at the right time.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Context Budget Breakdown</h4>\n  <p>A typical 128K token context window is consumed by:<br>\n  <strong>System prompt:</strong> ~2K tokens (agent instructions)<br>\n  <strong>Conversation history:</strong> ~5-20K tokens (previous messages)<br>\n  <strong>Tool definitions:</strong> ~3-5K tokens (available tools)<br>\n  <strong>Active files:</strong> ~10-50K tokens (open files, recent changes)<br>\n  <strong>Available for new content:</strong> ~50-100K tokens</p>\n</div>"
+    },
+    {
+      "title": "💻 Context Optimization Strategies",
+      "content": "",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": ".github/copilot-instructions.md — Context Optimization",
+          "code": "# Context Guide for Copilot\n\n## Quick Reference: Where Things Are\n- API routes: src/routes/*.ts\n- Business logic: src/services/*.ts\n- Database models: src/models/*.ts (Prisma)\n- Shared types: src/types/index.ts\n- Config: src/config/index.ts (reads from .env)\n- Tests mirror source: tests/unit/**, tests/e2e/**\n\n## Key Patterns (so Copilot doesn't need to read every file)\n- All services use dependency injection via constructor\n- Error handling: throw AppError(message, statusCode)\n- Auth: JWT middleware at src/middleware/auth.ts\n- Validation: Zod schemas co-located with routes\n- Logging: winston logger via src/utils/logger.ts\n\n## Database Schema Summary\n- users: id(uuid), email(unique), name, role, created_at\n- projects: id(uuid), name, owner_id(fk:users), status\n- tasks: id(uuid), title, project_id(fk:projects), assignee_id\n- comments: id(uuid), body, task_id(fk:tasks), author_id"
+        }
+      ],
+      "image": "m15_context_mgmt.png"
+    },
+    {
+      "title": "🛠️ Building a Custom Context Provider",
+      "content": "<p>For large codebases, you can build an MCP resource that provides relevant context on demand. This is like giving the agent a smart search engine for your codebase:</p>",
+      "codeBlocks": [
+        {
+          "lang": "python",
+          "title": "context_provider.py — Smart Context Provider",
+          "code": "from mcp.server.fastmcp import FastMCP\nfrom pathlib import Path\nimport subprocess\n\nmcp = FastMCP(\"context-provider\")\n\n@mcp.tool()\ndef find_related_files(file_path: str) -> str:\n    \"\"\"Find files related to the given file based on imports,\n    tests, and naming conventions.\n\n    Args:\n        file_path: Path to the source file\n    \"\"\"\n    base = Path(file_path)\n    related = []\n\n    # Find the test file\n    test_path = str(base).replace(\"src/\", \"tests/\").replace(\".ts\", \".test.ts\")\n    if Path(test_path).exists():\n        related.append(f\"Test: {test_path}\")\n\n    # Find files that import this module\n    module_name = base.stem\n    result = subprocess.run(\n        [\"grep\", \"-rl\", f\"from.*{module_name}\", \"src/\"],\n        capture_output=True, text=True\n    )\n    importers = result.stdout.strip().split(\"\\n\")\n    for f in importers[:5]:\n        if f and f != str(base):\n            related.append(f\"Imported by: {f}\")\n\n    # Find the model if this is a service\n    if \"service\" in str(base).lower():\n        model = str(base).replace(\"services\", \"models\").replace(\"Service\", \"\")\n        if Path(model).exists():\n            related.append(f\"Model: {model}\")\n\n    return \"\\n\".join(related) if related else \"No related files found\"\n\n@mcp.tool()\ndef get_architecture_summary() -> str:\n    \"\"\"Get a high-level summary of the project architecture\n    including directory structure, key files, and dependencies.\"\"\"\n    summary = []\n\n    # Count files by type\n    for ext in [\".ts\", \".js\", \".py\", \".json\"]:\n        count = len(list(Path(\"src\").rglob(f\"*{ext}\")))\n        summary.append(f\"{ext}: {count} files\")\n\n    # List main directories\n    dirs = sorted([d.name for d in Path(\"src\").iterdir() if d.is_dir()])\n    summary.append(f\"\\nMain directories: {', '.join(dirs)}\")\n\n    return \"\\n\".join(summary)\n\nif __name__ == \"__main__\":\n    mcp.run()"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "Why is context management important for AI agents in large codebases?",
+        "options": [
+          "To make the AI respond faster",
+          "Because the context window is limited — the agent needs to see the RIGHT information",
+          "To reduce internet bandwidth usage",
+          "Because large codebases have more bugs"
+        ],
+        "correct": 1,
+        "explanation": "AI models have a limited context window. In large codebases with thousands of files, effective context management ensures the agent sees the most relevant information for the current task."
+      },
+      {
+        "text": "What is the purpose of putting a schema summary in copilot-instructions.md?",
+        "options": [
+          "To create database migrations",
+          "So Copilot understands the data model without reading every model file, saving context space",
+          "To document the API for external developers",
+          "To generate TypeScript types automatically"
+        ],
+        "correct": 1,
+        "explanation": "Including a schema summary in copilot-instructions.md gives Copilot immediate understanding of the data model without consuming context tokens on individual model files."
+      },
+      {
+        "text": "What does the /compact command do in a long Copilot agent session?",
+        "options": [
+          "Compresses the source code files",
+          "Summarizes the conversation history into a compact representation to free up context window tokens",
+          "Speeds up the model's response time",
+          "Deletes the chat history"
+        ],
+        "correct": 1,
+        "explanation": "/compact summarizes the conversation so far into a compressed form, freeing context window tokens for continued work. Use it when the session becomes long and responses start degrading in quality."
+      },
+      {
+        "text": "Copilot's suggestions become less accurate after an hour of working on the same session. What is the most likely cause?",
+        "options": [
+          "The model is overheating",
+          "The context window is filling up with conversation history, diluting the signal-to-noise ratio for the current task",
+          "Your internet connection slowed down",
+          "The model randomly degrades over time"
+        ],
+        "correct": 1,
+        "explanation": "As a conversation grows, earlier, less-relevant messages consume context window space. This dilutes the relevant context and degrades output quality. Use /compact or start a new focused session to resolve this."
+      },
+      {
+        "text": "What does `#codebase` do when used in a Copilot Chat message?",
+        "options": [
+          "Opens the codebase in a new VS Code window",
+          "Signals Copilot to search across the entire repository for relevant context, not just open files",
+          "Attaches the codebase as a zip file",
+          "Runs the full test suite"
+        ],
+        "correct": 1,
+        "explanation": "#codebase is a context reference that instructs Copilot to perform a semantic search across the entire repository to find relevant files, rather than only considering currently open tabs or the active file."
+      }
+    ]
+  }
+}

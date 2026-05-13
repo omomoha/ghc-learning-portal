@@ -1,0 +1,111 @@
+{
+  "id": 14,
+  "workshop": 2,
+  "title": "Enterprise Model Strategy & AI Governance",
+  "time": "55 min",
+  "objectives": [
+    "Design an enterprise AI model strategy for your organization",
+    "Configure Copilot's model selection for different tasks",
+    "Implement governance policies for AI-generated code",
+    "Set up content exclusion and IP protection rules"
+  ],
+  "sections": [
+    {
+      "title": "🔍 Enterprise Model Strategy",
+      "content": "<p>In an enterprise setting, not every AI task needs the same model. A smart model strategy routes tasks to the right model based on complexity, cost, and risk — just like you'd assign tasks to team members based on their expertise.</p>\n<table class=\"content-table\">\n  <tr><th>Task Type</th><th>Recommended Model</th><th>Reasoning</th></tr>\n  <tr><td>Code completion</td><td>Fast, small model</td><td>Needs low latency, high volume</td></tr>\n  <tr><td>Code review</td><td>Large, capable model</td><td>Needs deep understanding of context</td></tr>\n  <tr><td>Security analysis</td><td>Specialized model</td><td>Domain-specific knowledge required</td></tr>\n  <tr><td>Documentation</td><td>Medium model</td><td>Good language skills, moderate cost</td></tr>\n  <tr><td>Architecture planning</td><td>Most capable model</td><td>Complex reasoning required</td></tr>\n</table>"
+    },
+    {
+      "title": "💻 Configuring Model Selection",
+      "content": "",
+      "codeBlocks": [
+        {
+          "lang": "json",
+          "title": "Organization-level Copilot Policy",
+          "code": "{\n  \"copilot_policies\": {\n    \"model_selection\": {\n      \"code_completion\": {\n        \"model\": \"copilot-fast\",\n        \"max_tokens\": 500,\n        \"temperature\": 0.1\n      },\n      \"agent_mode\": {\n        \"model\": \"gpt-4o\",\n        \"max_tokens\": 4096,\n        \"temperature\": 0.3\n      },\n      \"code_review\": {\n        \"model\": \"gpt-4o\",\n        \"max_tokens\": 2048,\n        \"temperature\": 0.1\n      }\n    },\n    \"content_exclusion\": {\n      \"patterns\": [\n        \"**/.env*\",\n        \"**/secrets/**\",\n        \"**/credentials/**\",\n        \"**/*.pem\",\n        \"**/*.key\"\n      ],\n      \"repositories\": [\n        \"internal-security-tools\",\n        \"compensation-data\"\n      ]\n    },\n    \"ip_protection\": {\n      \"block_suggestions_matching\": [\n        \"copyleft_licensed_code\",\n        \"exact_match_public_repos\"\n      ],\n      \"require_attribution\": true\n    }\n  }\n}"
+        }
+      ],
+      "image": "m14_model_strategy.png"
+    },
+    {
+      "title": "🛡️ Enforcement Mechanics: How Exclusions Actually Work",
+      "content": "<p>Knowing that content exclusion <em>exists</em> is not enough — you need to know exactly what it prevents and what it doesn't, so you can design a governance strategy that actually works.</p>\n<table class=\"data-table\">\n  <thead><tr><th>Exclusion Target</th><th>What It Prevents</th><th>What It Does NOT Prevent</th></tr></thead>\n  <tbody>\n    <tr><td><strong>File path exclusion</strong><br><code>**/.env*</code></td><td>Copilot won't include that file's content in its context window when generating suggestions</td><td>The file still exists; the developer can read it. Copilot just won't see it.</td></tr>\n    <tr><td><strong>Repository exclusion</strong><br><code>compensation-data</code> repo</td><td>Copilot is disabled entirely in that repository — no completions, no chat</td><td>Developers can still access the repo normally; exclusion only affects AI assistance</td></tr>\n    <tr><td><strong>Public code filter</strong> (IP protection)</td><td>Filters suggestions that exactly match code in GitHub's public training corpus</td><td>Paraphrased or structurally similar code — only exact/near-exact matches are filtered</td></tr>\n  </tbody>\n</table>\n<div class=\"concept-box warning\">\n  <h4>⚠️ Common Governance Misconceptions</h4>\n  <p>• Content exclusion does NOT encrypt or hide the file — it only removes it from AI context<br>\n  • Exclusion rules are enforced by the Copilot extension — a developer who disables the extension bypasses them<br>\n  • IP protection filters suggestions at the time of display — code already accepted is not retroactively flagged<br>\n  • Exclusion rules don't apply to GitHub Actions workflows that directly call the Copilot API</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "yaml",
+          "title": ".github/workflows/governance-checks.yml — Automated Compliance Gate",
+          "code": "name: AI Governance Compliance Check\non:\n  pull_request:\n    types: [opened, synchronize]\n\njobs:\n  check-ai-pr:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n\n      - name: Detect Copilot-generated PR\n        id: detect\n        uses: actions/github-script@v7\n        with:\n          script: |\n            const pr = context.payload.pull_request;\n            // Check if PR was authored by Copilot bot\n            const isCopilot =\n              pr.user.login === 'github-copilot[bot]' ||\n              pr.body?.includes('Generated by GitHub Copilot');\n            core.setOutput('is_copilot', String(isCopilot));\n            console.log(`Copilot PR: ${isCopilot}`);\n\n      - name: Check for excluded file patterns\n        if: steps.detect.outputs.is_copilot == 'true'\n        uses: actions/github-script@v7\n        with:\n          script: |\n            const { data: files } = await github.rest.pulls.listFiles({\n              owner: context.repo.owner,\n              repo: context.repo.repo,\n              pull_number: context.payload.pull_request.number\n            });\n\n            // Patterns that should never appear in AI-generated PRs\n            const EXCLUDED_PATTERNS = [\n              /\\.env/,\n              /secrets\\//,\n              /credentials\\//,\n              /\\.pem$/,\n              /\\.key$/\n            ];\n\n            const violations = files\n              .map(f => f.filename)\n              .filter(name => EXCLUDED_PATTERNS.some(p => p.test(name)));\n\n            if (violations.length > 0) {\n              core.setFailed(\n                `🚨 Governance violation: Copilot PR touches excluded files: ${violations.join(', ')}`\n              );\n            } else {\n              console.log('✅ No excluded files touched in this Copilot PR');\n            }\n\n      - name: Require security scan for agent PRs\n        if: steps.detect.outputs.is_copilot == 'true'\n        run: |\n          echo \"AI-generated PR flagged for mandatory security review\"\n          # This step can integrate with your SAST tool (Snyk, Semgrep, etc.)\n          # The workflow will fail if security scan finds HIGH severity issues"
+        }
+      ]
+    },
+    {
+      "title": "🔒 AI Governance Framework",
+      "content": "<p>Every enterprise needs a governance framework for AI-generated code. Here are the key pillars:</p>\n<div class=\"concept-box warning\">\n  <h4>⚠️ The Five Pillars of AI Code Governance</h4>\n  <p>1. <strong>IP Protection:</strong> Ensure AI-generated code doesn't contain copyleft-licensed snippets or violate third-party IP<br>\n  2. <strong>Security Review:</strong> All AI-generated code must pass the same security checks as human-written code<br>\n  3. <strong>Content Exclusion:</strong> Sensitive files and repos must be excluded from Copilot's context<br>\n  4. <strong>Audit Trail:</strong> Track which code was AI-generated for compliance and review purposes<br>\n  5. <strong>Quality Gates:</strong> AI-generated PRs must meet the same quality bar (tests, coverage, linting)</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "python",
+          "title": "governance/audit_trail.py — AI Code Audit Logger",
+          "code": "\"\"\"Track AI-generated code contributions for governance.\"\"\"\nimport json\nfrom datetime import datetime\nfrom pathlib import Path\n\nclass AIAuditTrail:\n    def __init__(self, audit_file=\"ai_audit_log.jsonl\"):\n        self.audit_file = Path(audit_file)\n\n    def log_generation(self, event: dict):\n        \"\"\"Log an AI code generation event.\"\"\"\n        record = {\n            \"timestamp\": datetime.utcnow().isoformat(),\n            \"event_type\": \"code_generation\",\n            \"model\": event.get(\"model\", \"unknown\"),\n            \"developer\": event.get(\"developer\"),\n            \"repository\": event.get(\"repository\"),\n            \"files_changed\": event.get(\"files\", []),\n            \"prompt_summary\": event.get(\"prompt\", \"\")[:200],\n            \"review_status\": \"pending\",\n            \"ip_check\": \"pending\"\n        }\n\n        with open(self.audit_file, \"a\") as f:\n            f.write(json.dumps(record) + \"\\n\")\n\n        return record\n\n    def get_ai_contribution_stats(self, repo: str) -> dict:\n        \"\"\"Get statistics on AI contributions to a repository.\"\"\"\n        records = []\n        with open(self.audit_file) as f:\n            for line in f:\n                r = json.loads(line)\n                if r[\"repository\"] == repo:\n                    records.append(r)\n\n        return {\n            \"total_generations\": len(records),\n            \"reviewed\": sum(1 for r in records if r[\"review_status\"] == \"approved\"),\n            \"pending_review\": sum(1 for r in records if r[\"review_status\"] == \"pending\"),\n            \"ai_code_percentage\": \"calculated_from_git_stats\"\n        }"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "Why should enterprise model strategy use different models for different tasks?",
+        "options": [
+          "Because only one model exists",
+          "To balance cost, latency, and capability based on task requirements",
+          "Because smaller models are always better",
+          "To confuse potential attackers"
+        ],
+        "correct": 1,
+        "explanation": "Different tasks have different needs — code completion needs speed, architecture planning needs deep reasoning. Routing tasks to appropriate models optimizes cost and performance."
+      },
+      {
+        "text": "What does 'content exclusion' mean in Copilot governance?",
+        "options": [
+          "Excluding Copilot from running on certain computers",
+          "Preventing specific files and repositories from being used as Copilot context",
+          "Excluding certain programming languages",
+          "Blocking AI from generating documentation"
+        ],
+        "correct": 1,
+        "explanation": "Content exclusion prevents sensitive files (secrets, credentials, proprietary code) from being sent to Copilot as context, protecting confidential information."
+      },
+      {
+        "text": "For a complex multi-file architectural refactoring task, which model would you choose and why?",
+        "options": [
+          "GPT-4o — it's the fastest",
+          "Claude Sonnet — optimized for complex multi-step reasoning, long context, and nuanced code analysis",
+          "Gemini 1.5 Pro — because it supports images",
+          "A smaller model — complex tasks don't need large models"
+        ],
+        "correct": 1,
+        "explanation": "Claude Sonnet excels at complex, multi-step reasoning tasks where nuance matters. For architectural refactoring requiring deep code understanding across many files, its reasoning capabilities outweigh the latency cost of GPT-4o."
+      },
+      {
+        "text": "Where are GitHub Copilot Enterprise audit logs found, and what do they capture?",
+        "options": [
+          "In the repository's git history",
+          "In GitHub Enterprise's audit log (Settings → Audit Log) — capturing who used Copilot, what prompts were sent, and what was accepted",
+          "Only in VS Code's output panel",
+          "They are not available in Copilot Enterprise"
+        ],
+        "correct": 1,
+        "explanation": "GitHub Enterprise audit logs record Copilot usage: user identity, timestamps, prompt categories, and suggestion acceptance rates. This data is essential for compliance, security reviews, and usage governance."
+      },
+      {
+        "text": "Your organization needs different teams to use different AI models based on task type. What Copilot Enterprise feature enables this?",
+        "options": [
+          "This is not possible — all users must use the same model",
+          "Per-policy model selection in GitHub Copilot Enterprise settings, routing tasks by type to appropriate models",
+          "Each developer configures their own model in VS Code",
+          "Models are assigned based on repository language"
+        ],
+        "correct": 1,
+        "explanation": "Copilot Enterprise allows policy-based model routing. Security teams can use Claude for auditing, frontend teams can use GPT-4o for speed, and data teams can use Gemini for large-context analysis — all managed centrally."
+      }
+    ]
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "id": 11,
+  "workshop": 2,
+  "title": "Model Context Protocol (MCP): Building AI Tool Servers",
+  "time": "60 min",
+  "objectives": [
+    "Understand what MCP is and why it matters for enterprise AI",
+    "Build a basic MCP server that exposes tools to AI agents",
+    "Connect an MCP server to GitHub Copilot",
+    "Design tools that follow MCP best practices"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What is MCP?",
+      "content": "<p>The <strong>Model Context Protocol (MCP)</strong> is an open standard created by Anthropic that allows AI models to connect to external tools and data sources. Think of MCP as a \"USB port for AI\" — it provides a standardized way for any AI agent to use any tool, regardless of the vendor.</p>\n<p>Without MCP, every AI tool integration is custom-built. With MCP, you build a tool server once and any MCP-compatible AI (Copilot, Claude, etc.) can use it.</p>\n<div class=\"concept-box info\">\n  <h4>💡 MCP Architecture</h4>\n  <p><strong>MCP Host:</strong> The AI application (e.g., VS Code with Copilot)<br>\n  <strong>MCP Client:</strong> Protocol handler inside the host<br>\n  <strong>MCP Server:</strong> Your custom tool server that exposes capabilities<br>\n  <strong>Transport:</strong> Communication layer (stdio or HTTP/SSE)</p>\n</div>"
+    },
+    {
+      "title": "💻 Building Your First MCP Server (Node.js)",
+      "content": "<p>Let's build an MCP server that provides a database query tool. This allows Copilot to query your project's database directly when answering questions about data.</p>",
+      "codeBlocks": [
+        {
+          "lang": "javascript",
+          "title": "mcp-server/index.js — Basic MCP Server",
+          "code": "import { McpServer } from \"@modelcontextprotocol/sdk/server/mcp.js\";\nimport { StdioServerTransport } from \"@modelcontextprotocol/sdk/server/stdio.js\";\nimport { z } from \"zod\";\nimport Database from \"better-sqlite3\";\n\n// Initialize MCP server\nconst server = new McpServer({\n  name: \"project-database\",\n  version: \"1.0.0\",\n  description: \"Query the project database for analytics and reporting\"\n});\n\n// Connect to your database\nconst db = new Database(\"./project.db\");\n\n// Define a tool: query the database\nserver.tool(\n  \"query_database\",\n  \"Run a read-only SQL query against the project database\",\n  {\n    query: z.string().describe(\"SQL SELECT query to execute\"),\n    limit: z.number().default(50).describe(\"Max rows to return\")\n  },\n  async ({ query, limit }) => {\n    // Security: only allow SELECT queries\n    if (!query.trim().toUpperCase().startsWith(\"SELECT\")) {\n      return {\n        content: [{\n          type: \"text\",\n          text: \"Error: Only SELECT queries are allowed\"\n        }]\n      };\n    }\n\n    try {\n      const rows = db.prepare(query).all().slice(0, limit);\n      return {\n        content: [{\n          type: \"text\",\n          text: JSON.stringify(rows, null, 2)\n        }]\n      };\n    } catch (err) {\n      return {\n        content: [{\n          type: \"text\",\n          text: `Query error: ${err.message}`\n        }]\n      };\n    }\n  }\n);\n\n// Start the server\nconst transport = new StdioServerTransport();\nawait server.connect(transport);\nconsole.error(\"MCP Server running on stdio\");"
+        }
+      ],
+      "image": "m11_mcp_server.png"
+    },
+    {
+      "title": "🔌 Connecting MCP to VS Code & Copilot",
+      "content": "<p>After building your MCP server, you need to register it in your VS Code settings so Copilot can discover and use it:</p>",
+      "codeBlocks": [
+        {
+          "lang": "json",
+          "title": ".vscode/settings.json — Register MCP Server",
+          "code": "{\n  \"mcp\": {\n    \"servers\": {\n      \"project-database\": {\n        \"command\": \"node\",\n        \"args\": [\"./mcp-server/index.js\"],\n        \"env\": {\n          \"DB_PATH\": \"./project.db\"\n        }\n      }\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "title": "🐍 Python MCP Server Example",
+      "content": "<p>Here is the same MCP server concept implemented in Python using the official MCP SDK:</p>",
+      "codeBlocks": [
+        {
+          "lang": "python",
+          "title": "mcp_server.py — Python MCP Server",
+          "code": "from mcp.server.fastmcp import FastMCP\nimport sqlite3\n\nmcp = FastMCP(\"project-database\")\n\n@mcp.tool()\ndef query_database(query: str, limit: int = 50) -> str:\n    \"\"\"Run a read-only SQL query against the project database.\n\n    Args:\n        query: SQL SELECT query to execute\n        limit: Maximum rows to return (default: 50)\n    \"\"\"\n    if not query.strip().upper().startswith(\"SELECT\"):\n        return \"Error: Only SELECT queries are allowed\"\n\n    try:\n        conn = sqlite3.connect(\"project.db\")\n        conn.row_factory = sqlite3.Row\n        cursor = conn.execute(query)\n        rows = [dict(row) for row in cursor.fetchmany(limit)]\n        conn.close()\n        return str(rows)\n    except Exception as e:\n        return f\"Query error: {e}\"\n\n@mcp.tool()\ndef list_tables() -> str:\n    \"\"\"List all tables in the database.\"\"\"\n    conn = sqlite3.connect(\"project.db\")\n    cursor = conn.execute(\n        \"SELECT name FROM sqlite_master WHERE type='table'\"\n    )\n    tables = [row[0] for row in cursor.fetchall()]\n    conn.close()\n    return \", \".join(tables)\n\nif __name__ == \"__main__\":\n    mcp.run(transport=\"stdio\")"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the best analogy for MCP?",
+        "options": [
+          "A database driver",
+          "A USB port for AI — standardized interface for connecting tools",
+          "A programming language",
+          "A CI/CD pipeline"
+        ],
+        "correct": 1,
+        "explanation": "MCP is like a USB port — it provides a standardized interface so any AI model can connect to any tool, without custom integrations."
+      },
+      {
+        "text": "Why does the MCP server example only allow SELECT queries?",
+        "options": [
+          "Because MCP doesn't support other query types",
+          "To prevent the AI from accidentally modifying or deleting data",
+          "Because SQLite only supports SELECT",
+          "To improve query performance"
+        ],
+        "correct": 1,
+        "explanation": "Restricting to SELECT is a security best practice. AI agents should have read-only access to databases to prevent accidental data modification or deletion."
+      },
+      {
+        "text": "What transport methods does MCP support?",
+        "options": [
+          "Only HTTP",
+          "Only WebSocket",
+          "stdio and HTTP/SSE",
+          "gRPC only"
+        ],
+        "correct": 2,
+        "explanation": "MCP supports stdio (standard input/output, good for local servers) and HTTP with Server-Sent Events (good for remote servers)."
+      },
+      {
+        "text": "What is the difference between an MCP Tool and an MCP Resource?",
+        "options": [
+          "Tools are faster than Resources",
+          "Tools perform actions with side effects; Resources provide read-only access to data",
+          "Resources can call APIs; Tools cannot",
+          "They are identical concepts with different names"
+        ],
+        "correct": 1,
+        "explanation": "MCP Tools are executable functions that can have side effects (write to DB, send message, run command). MCP Resources are read-only data sources (file contents, DB records) — they expose data without triggering actions."
+      },
+      {
+        "text": "Your mcp.json includes `requireApproval: ['run_terminal']`. An agent tries to run `rm -rf /tmp/build`. What happens?",
+        "options": [
+          "The command executes immediately",
+          "The agent is blocked permanently",
+          "Execution pauses and the user is prompted to approve or deny the terminal command",
+          "The agent silently skips the step"
+        ],
+        "correct": 2,
+        "explanation": "requireApproval creates a human-in-the-loop checkpoint. Before executing any tool in the requireApproval list, the agent pauses and waits for explicit human confirmation — preventing accidental destructive operations."
+      }
+    ]
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "id": 9,
+  "workshop": 2,
+  "title": "Copilot Skills Framework & Custom Instructions",
+  "time": "50 min",
+  "objectives": [
+    "Understand the Copilot Skills Framework and its purpose",
+    "Create custom instructions that shape Copilot's behavior",
+    "Define project-level and organization-level skill configurations",
+    "Implement skills that enforce your team's coding standards"
+  ],
+  "sections": [
+    {
+      "title": "🔍 What is the Skills Framework?",
+      "content": "<p>The <strong>Copilot Skills Framework</strong> is a system for customizing how GitHub Copilot behaves in your project or organization. Skills are instructions, tools, and configurations that teach Copilot about your specific codebase, standards, and workflows.</p>\n<p>Without skills, Copilot operates on general programming knowledge. With skills, it becomes an expert on <em>your</em> codebase — understanding your architecture, patterns, naming conventions, and business domain.</p>\n<div class=\"concept-box info\">\n  <h4>💡 Skills Hierarchy</h4>\n  <p><strong>Organization Skills:</strong> Standards that apply to all repos (e.g., security policies)<br>\n  <strong>Repository Skills:</strong> Project-specific patterns and conventions<br>\n  <strong>Workspace Skills:</strong> Local developer preferences<br>\n  Skills are applied in this order — more specific skills override general ones.</p>\n</div>"
+    },
+    {
+      "title": "💻 Creating Custom Instructions",
+      "content": "<p>Custom instructions live in specific files that Copilot reads automatically. Here are the three levels:</p>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": ".github/copilot-instructions.md (Repository Level)",
+          "code": "# Project: Acme Talent Platform\n\n## Architecture\nThis is a monorepo with:\n- /api — Express.js REST API (TypeScript)\n- /web — Next.js frontend (React + TypeScript)\n- /shared — Shared types and utilities\n- /infra — Terraform infrastructure code\n\n## Coding Standards\n- Use functional components with hooks (no class components)\n- State management: Zustand (NOT Redux)\n- API calls: Use the custom useApi() hook in shared/hooks\n- Date handling: dayjs (NOT moment.js)\n- All API endpoints must validate input with Zod schemas\n\n## Database\n- PostgreSQL with Prisma ORM\n- Migrations: Use `prisma migrate dev` for development\n- Always include created_at and updated_at timestamps\n- Use UUID for primary keys\n\n## Testing\n- Unit tests: Vitest with React Testing Library\n- E2E tests: Playwright\n- Minimum 80% coverage for new code\n- Mock external services, never call real APIs in tests"
+        }
+      ],
+      "image": "m9_skills_framework.png"
+    },
+    {
+      "title": "⚡ Instruction Conflicts: Priority & Resolution",
+      "content": "<p>When Copilot receives instructions from multiple sources simultaneously — organization-level, repository-level, and workspace-level — they don't always agree. Understanding how conflicts are resolved prevents unexpected behaviour.</p>\n<table class=\"data-table\">\n  <thead><tr><th>Conflict Type</th><th>Example</th><th>Winner</th><th>Why</th></tr></thead>\n  <tbody>\n    <tr><td>Framework preference</td><td>Org: \"Use Jest\" vs Repo: \"Use Vitest\"</td><td>Repository</td><td>More specific scope overrides broader</td></tr>\n    <tr><td>Style rule</td><td>Org: \"4-space indent\" vs Workspace: \"2-space indent\"</td><td>Workspace</td><td>Workspace (most specific) always wins</td></tr>\n    <tr><td>Additive (no conflict)</td><td>Org: security rules + Repo: API patterns</td><td>Both applied</td><td>Non-contradictory rules stack — all apply</td></tr>\n    <tr><td>Direct contradiction</td><td>Org: \"Always use async/await\" vs Repo: \"Use callbacks for legacy compat\"</td><td>Repository</td><td>Repo-level specificity wins; but this is a smell — resolve at org level</td></tr>\n  </tbody>\n</table>\n<div class=\"concept-box tip\">\n  <h4>✅ Best Practice: Separate Concerns by Level</h4>\n  <p>Design your instruction hierarchy to avoid conflicts by assigning distinct concerns to each level:<br>\n  <strong>Organization level</strong> → Security policies, banned libraries, IP protection rules<br>\n  <strong>Repository level</strong> → Tech stack choices, architecture patterns, test framework<br>\n  <strong>Workspace level</strong> → Personal editor preferences, local experiment flags</p>\n</div>",
+      "codeBlocks": [
+        {
+          "lang": "markdown",
+          "title": "Org-level: .github/copilot-instructions.md (Security-focused)",
+          "code": "# Organization: Acme Engineering — Security Standards\n\n## SECURITY (applies to ALL repositories)\n- NEVER suggest hardcoded secrets, API keys, or passwords\n- ALWAYS use parameterised queries — never string concatenation in SQL\n- Input from external sources MUST be validated before use\n- JWT secrets MUST come from environment variables, never literals\n\n## BANNED LIBRARIES (across all repos)\n- Do NOT suggest: moment.js (use dayjs), request (use fetch/axios),\n  node-uuid (use crypto.randomUUID())\n\n## THESE RULES CANNOT BE OVERRIDDEN by repository-level instructions"
+        },
+        {
+          "lang": "markdown",
+          "title": "Repo-level: .github/copilot-instructions.md (Stack-focused)",
+          "code": "# Project: Acme Talent Platform\n\n## TECH STACK (this repo only)\n- Backend: Express.js + TypeScript (strict mode)\n- Database: PostgreSQL with Prisma ORM\n- State: Zustand (NOT Redux — org-level security rules still apply)\n- Testing: Vitest + React Testing Library\n\n## NOTE: Org-level security rules ALSO apply here.\n## This file adds project-specific patterns ON TOP of org rules.\n## To see what the org-level rules say, check the organisation's\n## copilot-instructions.md in .github/"
+        }
+      ]
+    },
+    {
+      "title": "🛠️ Practical Example: Skills in Action",
+      "content": "<p>Let's see how custom instructions change Copilot's behavior. Without instructions, Copilot might generate Redux code. With your skills configured:</p>",
+      "codeBlocks": [
+        {
+          "lang": "typescript",
+          "title": "What Copilot generates WITH custom instructions",
+          "code": "// Copilot knows to use Zustand (not Redux) and your useApi hook\nimport { create } from 'zustand';\nimport { useApi } from '@shared/hooks/useApi';\nimport { z } from 'zod';\n\n// Copilot uses Zod for validation (as specified in instructions)\nconst UserSchema = z.object({\n  id: z.string().uuid(),\n  name: z.string().min(2).max(100),\n  email: z.string().email(),\n  role: z.enum(['engineer', 'manager', 'admin']),\n  createdAt: z.string().datetime(),\n  updatedAt: z.string().datetime(),\n});\n\ntype User = z.infer<typeof UserSchema>;\n\n// Copilot uses Zustand store pattern (your standard)\ninterface UserStore {\n  users: User[];\n  loading: boolean;\n  fetchUsers: () => Promise<void>;\n}\n\nexport const useUserStore = create<UserStore>((set) => ({\n  users: [],\n  loading: false,\n  fetchUsers: async () => {\n    set({ loading: true });\n    const api = useApi();\n    const data = await api.get('/users');\n    const validated = z.array(UserSchema).parse(data);\n    set({ users: validated, loading: false });\n  },\n}));"
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "questions": [
+      {
+        "text": "What is the primary purpose of the Copilot Skills Framework?",
+        "options": [
+          "To make Copilot run faster",
+          "To customize Copilot's behavior for your specific codebase and standards",
+          "To restrict Copilot to certain programming languages",
+          "To provide Copilot with internet access"
+        ],
+        "correct": 1,
+        "explanation": "The Skills Framework lets you teach Copilot about your specific architecture, patterns, naming conventions, and business domain — making it an expert on your codebase."
+      },
+      {
+        "text": "In the skills hierarchy, which level has the highest priority?",
+        "options": [
+          "Organization Skills",
+          "Repository Skills",
+          "Workspace Skills (most specific wins)",
+          "They all have equal priority"
+        ],
+        "correct": 2,
+        "explanation": "Skills follow a specificity hierarchy. Workspace skills (most local) override repository skills, which override organization skills. More specific always wins."
+      },
+      {
+        "text": "What file provides always-on, organization-wide instructions to every Copilot interaction in a repository?",
+        "options": [
+          "AGENTS.md",
+          ".github/copilot-instructions.md",
+          ".vscode/settings.json",
+          "SKILL.md"
+        ],
+        "correct": 1,
+        "explanation": ".github/copilot-instructions.md is automatically loaded for every Copilot chat session in the repository. Unlike AGENTS.md (which governs autonomous agents), copilot-instructions.md applies to all interactive Copilot sessions."
+      },
+      {
+        "text": "A new engineer joins the team and Copilot immediately generates code using your team's patterns without any setup. What makes this possible?",
+        "options": [
+          "The engineer installed a VS Code extension",
+          ".github/copilot-instructions.md in the repository defines team conventions applied automatically to all Copilot interactions",
+          "Copilot learned from previous commits",
+          "The engineer configured their personal settings"
+        ],
+        "correct": 1,
+        "explanation": "Repository-level copilot-instructions.md is version-controlled and shared. Any developer who clones the repo automatically benefits from team-defined standards without manual configuration."
+      },
+      {
+        "text": "Where do you store custom Copilot skills so they are versioned and available to the whole team?",
+        "options": [
+          "In each developer's home directory",
+          ".github/skills/ directory in the repository",
+          "In the GitHub organization settings",
+          "In the package.json devDependencies"
+        ],
+        "correct": 1,
+        "explanation": ".github/skills/ is the standard location for team-shared skills. Being in the repository means skills are version-controlled with git, reviewed via PRs, and immediately available to all collaborators."
+      }
+    ]
+  }
+}

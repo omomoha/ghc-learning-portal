@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin()    { return isSignedIn() && request.auth.token.admin == true; }
+
+    // Admin-uploaded learning resources (PDFs, slide decks, video files).
+    // Path: /resources/{resourceId}/{fileName}
+    // Any signed-in learner can read. Only admins can write. 200 MB cap per file.
+    match /resources/{resourceId}/{fileName} {
+      allow read:   if isSignedIn();
+      allow create: if isAdmin()
+                    && request.resource.size < 200 * 1024 * 1024
+                    && request.resource.contentType.matches('application/pdf|application/vnd.openxmlformats-officedocument.presentationml.presentation|video/.*|image/.*');
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // User-uploaded avatars (small, public-read within the app).
+    match /avatars/{uid}/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn()
+                   && request.auth.uid == uid
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
